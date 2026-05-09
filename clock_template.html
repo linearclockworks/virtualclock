@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Linear Clock">
+<title>Linear Clockworks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0b08; --gold:#c8a96e; --gold2:#e8c98e; --text:#d4c5a9; --muted:#7a6a52;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;background:var(--bg);color:var(--text);
+    font-family:'Crimson Pro',Georgia,serif;overflow:hidden;user-select:none;}
+
+  /* ── Clock view ── */
+  #clock-view{display:flex;flex-direction:column;align-items:center;
+    justify-content:center;height:100vh;padding:0 20px;}
+  #clock-stage{position:relative;width:min(90vw,960px);overflow:visible;}
+  #face-img{width:100%;display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7));}
+  #ptr-wrap{position:absolute;pointer-events:none;will-change:left;}
+  #ptr-img{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));}
+
+  /* ── Time strip ── */
+  #time-strip{margin-top:10px;text-align:center;line-height:1;overflow:hidden;
+    max-height:80px;transition:max-height 0.4s ease,opacity 0.4s ease,margin-top 0.4s ease;opacity:1;}
+  #time-strip.hidden{max-height:0;opacity:0;margin-top:0;}
+  #time-hm{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3.5vw,2.6rem);
+    font-weight:400;color:var(--gold2);letter-spacing:0.05em;}
+  #time-sec{font-size:clamp(0.8rem,1.6vw,1.3rem);color:var(--muted);margin-left:0.2em;}
+  #date-line{font-size:clamp(0.7rem,1.3vw,1rem);color:var(--gold);letter-spacing:0.18em;
+    text-transform:uppercase;margin-top:0.35em;font-style:italic;}
+
+  /* ── Toolbar ── */
+  #toolbar{position:fixed;bottom:12px;right:14px;display:flex;gap:8px;align-items:center;z-index:20;}
+  .tool-btn{background:none;border:none;color:var(--muted);font-size:1.1rem;
+    cursor:pointer;opacity:0.45;transition:opacity 0.2s;padding:4px;line-height:1;}
+  .tool-btn:hover{opacity:1;}
+
+  /* ── Setup overlay ── */
+  #setup-overlay{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);
+    flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;z-index:50;padding:20px;
+  }
+  #setup-overlay h2{
+    font-family:'Playfair Display',serif;
+    font-size:clamp(1rem,2.2vw,1.5rem);color:var(--gold2);letter-spacing:0.08em;
+  }
+
+  /* Face preview inside overlay */
+  #setup-stage{position:relative;width:min(88vw,840px);overflow:visible;flex-shrink:0;}
+  #setup-face{width:100%;display:block;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.5));}
+  #setup-ptr-wrap{position:absolute;pointer-events:none;}
+  #setup-ptr-img{width:100%;height:100%;display:block;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));}
+
+  /* Sliders */
+  #sliders{display:flex;flex-direction:column;gap:9px;width:min(88vw,500px);}
+  .sl-row{display:grid;grid-template-columns:130px 1fr 48px;align-items:center;gap:10px;}
+  .sl-row label{color:var(--text);font-size:clamp(0.78rem,1.5vw,0.9rem);
+    letter-spacing:0.06em;text-align:right;}
+  .sl-row input[type=range]{width:100%;accent-color:var(--gold);cursor:pointer;}
+  .sl-row .val{color:var(--gold);font-size:0.8rem;font-family:monospace;text-align:right;}
+
+  .setup-row{display:flex;gap:10px;align-items:center;}
+  .btn{background:transparent;border:1px solid var(--gold);color:var(--gold);
+    padding:7px 24px;font-family:'Crimson Pro',serif;
+    font-size:clamp(0.8rem,1.6vw,1rem);letter-spacing:0.12em;text-transform:uppercase;
+    cursor:pointer;transition:all 0.2s;border-radius:2px;}
+  .btn:hover{background:var(--gold);color:var(--bg);}
+  .hint{font-size:0.72rem;color:var(--muted);text-align:center;line-height:1.5;}
+  .anchor-row{display:grid;grid-template-columns:90px 1fr 44px;align-items:center;gap:10px;}
+  .anchor-btn{background:transparent;border:1px solid var(--muted);color:var(--gold);
+    padding:5px 0;font-family:'Crimson Pro',serif;font-size:clamp(0.75rem,1.4vw,0.88rem);
+    letter-spacing:0.08em;cursor:pointer;border-radius:2px;width:100%;
+    transition:all 0.15s;}
+  .anchor-btn:hover{border-color:var(--gold);background:rgba(200,169,110,0.12);}
+  .anchor-row input[type=range]{width:100%;accent-color:var(--gold);cursor:pointer;}
+  .anchor-row .val{color:var(--gold);font-size:0.8rem;font-family:monospace;text-align:right;}
+</style>
+</head>
+<body>
+
+<!-- ── Clock view ── -->
+<div id="clock-view">
+  <div id="clock-stage">
+    <img id="face-img" src="FACE_DATA_URI" alt="clock face">
+    <div id="ptr-wrap"><img id="ptr-img" src="PTR_DATA_URI" alt="pointer"></div>
+  </div>
+  <div id="time-strip">
+    <div><span id="time-hm">--:--</span><span id="time-sec">:--</span></div>
+    <div id="date-line">loading…</div>
+  </div>
+</div>
+
+<!-- ── Setup overlay ── -->
+<div id="setup-overlay">
+  <div id="setup-stage">
+    <img id="setup-face" src="FACE_DATA_URI" alt="">
+    <div id="setup-ptr-wrap"><img id="setup-ptr-img" src="PTR_DATA_URI" alt=""></div>
+  </div>
+  <div id="sliders">
+    <!-- Three time anchors -->
+    <div class="anchor-row">
+      <button class="anchor-btn" onclick="goAnchor(0)">&#9654; 6 AM</button>
+      <input type="range" id="sl-6am" min="-4" max="4" step="0.05" value="0"
+             oninput="onAnchor('6am', this.value)">
+      <span class="val" id="val-6am">0.0</span>
+    </div>
+    <div class="anchor-row">
+      <button class="anchor-btn" onclick="goAnchor(0.5)">&#9654; 3 PM</button>
+      <input type="range" id="sl-3pm" min="-4" max="4" step="0.05" value="0"
+             oninput="onAnchor('3pm', this.value)">
+      <span class="val" id="val-3pm">0.0</span>
+    </div>
+    <div class="anchor-row">
+      <button class="anchor-btn" onclick="goAnchor(1)">&#9654; Midnight</button>
+      <input type="range" id="sl-mid" min="-4" max="4" step="0.05" value="0"
+             oninput="onAnchor('mid', this.value)">
+      <span class="val" id="val-mid">0.0</span>
+    </div>
+    <!-- Pointer height -->
+    <div class="sl-row" style="margin-top:4px;">
+      <label>Pointer height</label>
+      <input type="range" id="sl-track" min="30" max="80" step="0.1" value="55.4"
+             oninput="onSl('track',this.value)">
+      <span class="val" id="val-track">55.4%</span>
+    </div>
+  </div>
+  <div class="setup-row">
+    <button class="btn" onclick="resetSetup()">Reset</button>
+    <button class="btn" id="sweep-btn" onclick="startSweep()">&#9654; Sweep</button>
+    <input type="range" id="sl-speed" min="0.25" max="4" step="0.25" value="1"
+           title="Sweep speed" oninput="onSl('speed',this.value)"
+           style="width:90px;accent-color:var(--gold);cursor:pointer;align-self:center;">
+    <span class="val" id="val-speed" style="color:var(--gold);font-size:0.82rem;font-family:monospace;min-width:28px;">1×</span>
+    <button class="btn" onclick="finishSetup()">Done</button>
+  </div>
+</div>
+
+<!-- ── Toolbar ── -->
+<div id="toolbar">
+  <button class="tool-btn" id="toggle-time-btn" title="Toggle time display" onclick="toggleTime()">🕐</button>
+  <button class="tool-btn" title="Calibrate" onclick="showSetup()">⚙</button>
+</div>
+
+<script>
+const PTR_TIP_Y   = 0.9217;
+const PTR_TIP_X   = 0.5207;
+const PTR_H_RATIO = 0.5288;   // ptr height = this × face image height (corrected for wood extent)
+const CLOCK_HOURS = 18, ORIGIN_HOUR = 6;
+
+// Defaults measured from Chiara face image
+// nudge6am/nudge3pm/nudgeMid: fine-tune offsets in % of face image width
+const DEFAULTS = { leftFrac:0.145, rightFrac:0.852, trackYFrac:0.554,
+                   nudge6am:0, nudge3pm:0, nudgeMid:0, sweepSpeed:1 };
+
+let cal = loadCal();
+let wip = Object.assign({}, cal);
+let timeVisible = true, firstTick = true, sweeping = false;
+let currentPreviewFrac = 0;  // used by sweep
+
+function loadCal() {
+  try { const s=localStorage.getItem('lc_cal'); if(s) return JSON.parse(s); } catch(e){}
+  return Object.assign({}, DEFAULTS);
+}
+function saveCal() { localStorage.setItem('lc_cal', JSON.stringify(cal)); }
+
+// ── Quadratic correction from 3 anchor nudges ──
+// Anchors at frac 0 (6AM), 0.5 (3PM), 1.0 (midnight).
+// nudges shift each anchor in % of face image width.
+// Fit quadratic f(t) through corrected (0,0),(0.5,m),(1,1): f(t)=(2-4m)t²+(4m-1)t
+function correctedFrac(t, c) {
+  // Use the actual nudged span so 3PM correction stays correct
+  // relative to wherever 6AM and midnight have been placed.
+  const refSpan = (c.rightFrac + (c.nudgeMid||0)/100) - (c.leftFrac + (c.nudge6am||0)/100);
+  if (refSpan <= 0) return t;
+  const d3 = (c.nudge3pm||0)/100 / refSpan;
+  const m = Math.max(0.02, Math.min(0.98, 0.5 + d3));
+  const a = 2 - 4*m, b = 4*m - 1;
+  return a*t*t + b*t;
+}
+
+// ── Place a pointer on any stage ──
+function placePtr(wrap, stageEl, frac, c) {
+  const sw=stageEl.offsetWidth, sh=stageEl.offsetHeight;
+  const pH=sh*PTR_H_RATIO, pW=pH*(338/600);
+  const left  = (c.leftFrac  + (c.nudge6am||0)/100) * sw;
+  const right = (c.rightFrac + (c.nudgeMid||0)/100) * sw;
+  const cf    = correctedFrac(frac, c);
+  const tipX  = left + cf * (right - left);
+  const tipY  = c.trackYFrac * sh;
+  Object.assign(wrap.style, {
+    width:pW+'px', height:pH+'px',
+    left:(tipX-pW*PTR_TIP_X)+'px',
+    top:(tipY-pH*PTR_TIP_Y)+'px'
+  });
+}
+
+const ptrWrap   = document.getElementById('ptr-wrap');
+const stage     = document.getElementById('clock-stage');
+// Fall back to main clock elements if setup overlay not present (customer build)
+const setupWrap = document.getElementById('setup-ptr-wrap') || ptrWrap;
+const setupStg  = document.getElementById('setup-stage')    || stage;
+
+function timeToFrac(now) {
+  const m=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+  const span=CLOCK_HOURS*60,orig=ORIGIN_HOUR*60,day=24*60;
+  return(((m-orig)%day+day)%day%span)/span;
+}
+
+// ── Main tick ──
+function tick() {
+  const now=new Date();
+  const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();
+  const hh=h%12||12,ap=h<12?'AM':'PM';
+  document.getElementById('time-hm').textContent=hh+':'+String(m).padStart(2,'0')+' '+ap;
+  document.getElementById('time-sec').textContent=':'+String(s).padStart(2,'0');
+  const D=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('date-line').textContent=
+    D[now.getDay()]+'  ·  '+M[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+  if (sweeping) return;  // sweep owns the pointer
+  placePtr(ptrWrap, stage, timeToFrac(now), cal);
+  if(firstTick){firstTick=false;setTimeout(()=>{if(!sweeping)ptrWrap.style.transition='left 1.2s cubic-bezier(0.4,0,0.2,1)';},50);}
+}
+
+// ── Toggle time ──
+function toggleTime() {
+  timeVisible=!timeVisible;
+  document.getElementById('time-strip').classList.toggle('hidden',!timeVisible);
+  document.getElementById('toggle-time-btn').style.opacity=timeVisible?'0.45':'0.85';
+  localStorage.setItem('lc_time_vis',timeVisible?'1':'0');
+}
+
+// ── Setup ──
+
+
+function showSetup() {
+  wip = Object.assign({}, cal);
+  syncSlidersFromWip();
+  document.getElementById('setup-overlay').style.display='flex';
+  livePreview(0);
+}
+
+function livePreview(frac) {
+  if (frac === undefined) frac = currentPreviewFrac;
+  currentPreviewFrac = frac;
+  placePtr(setupWrap, setupStg, frac, wip);
+}
+
+// Anchor nudge sliders: value is in % of face width, range -8 to +8
+function onAnchor(which, val) {
+  const v = parseFloat(val);
+  const fmt = (v >= 0 ? '+' : '') + v.toFixed(1);
+  if (which==='6am') { wip.nudge6am=v; document.getElementById('val-6am').textContent=fmt; livePreview(0); }
+  if (which==='3pm') { wip.nudge3pm=v; document.getElementById('val-3pm').textContent=fmt; livePreview(0.5); }
+  if (which==='mid') { wip.nudgeMid=v; document.getElementById('val-mid').textContent=fmt; livePreview(1); }
+}
+
+// Jump pointer to anchor position for visual verification
+function goAnchor(frac) { livePreview(frac); }
+
+
+function onSl(which, val) {
+  const v = parseFloat(val)/100;
+  if(which==='track') { wip.trackYFrac=v; document.getElementById('val-track').textContent=parseFloat(val).toFixed(1)+'%'; livePreview(); }
+  if(which==='speed') { const s=parseFloat(val); wip.sweepSpeed=s; document.getElementById('val-speed').textContent=s+'×'; }
+}
+
+function syncSlidersFromWip() {
+  const t=(wip.trackYFrac*100);
+  const n6=wip.nudge6am||0, n3=wip.nudge3pm||0, nm=wip.nudgeMid||0;
+  const sp=wip.sweepSpeed||1;
+  document.getElementById('sl-track').value = t;
+  document.getElementById('sl-6am').value   = n6;
+  document.getElementById('sl-3pm').value   = n3;
+  document.getElementById('sl-mid').value   = nm;
+  document.getElementById('sl-speed').value = sp;
+  document.getElementById('val-track').textContent = t.toFixed(1)+'%';
+  const fmt = v => (v>=0?'+':'')+v.toFixed(1);
+  document.getElementById('val-6am').textContent  = fmt(n6);
+  document.getElementById('val-3pm').textContent  = fmt(n3);
+  document.getElementById('val-mid').textContent  = fmt(nm);
+  document.getElementById('val-speed').textContent = sp+'×';
+}
+
+function resetSetup() {
+  localStorage.removeItem('lc_cal');   // clear any stale saved cal
+  wip = Object.assign({}, DEFAULTS);
+  syncSlidersFromWip();
+  livePreview(0);
+}
+
+// ── Sweep animation ──
+let sweepRAF = null, sweepTimeout = null;
+
+function startSweep() {
+  stopSweep();
+  sweeping = true;
+  ptrWrap.style.transition = 'none';  // hard disable CSS transition during sweep
+  const btn = document.getElementById('sweep-btn');
+  btn.textContent = '◼ Stop';
+  btn.onclick = stopSweep;
+
+  // Start from current time position
+  currentPreviewFrac = timeToFrac(new Date());
+
+  // Steps store frac only; timing is read live from wip.sweepSpeed each step
+  // so slider changes take effect immediately
+  // Day: frac 0→1 in 18 steps. Night return: frac 1→0 in 6 steps.
+  // Same motor speed = same px/sec. Night steps cover 3x distance → 3x glide time.
+  // No pause on night return (continuous motor).
+  const daySteps   = Array.from({length: CLOCK_HOURS + 1}, (_, i) => i / CLOCK_HOURS);
+  const nightSteps = Array.from({length: 6}, (_, i) => (5 - i) / 6);
+
+  let stepIdx = 0;
+  const isNight = i => i >= daySteps.length;
+
+  function getSpeed() {
+    return parseFloat(document.getElementById('sl-speed').value) || wip.sweepSpeed || 1;
+  }
+
+  function runStep() {
+    if (stepIdx >= daySteps.length + nightSteps.length) {
+      const s = getSpeed();
+      const nowFrac = timeToFrac(new Date());
+      animateToFrac(nowFrac, Math.round(1200 / s), () => {
+        currentPreviewFrac = nowFrac;
+        sweepDone();
+      });
+      return;
+    }
+    const night = stepIdx >= daySteps.length;
+    const targetFrac = night
+      ? nightSteps[stepIdx - daySteps.length]
+      : daySteps[stepIdx];
+    stepIdx++;
+    const s = getSpeed();
+    const glideMs = night
+      ? Math.round(2100 / s)          // 3× day glide, no pause (continuous return)
+      : stepIdx === 1
+        ? Math.round(1200 / s)        // initial glide to 6AM from current time
+        : Math.round(700  / s);       // normal day hop
+    const pauseMs = Math.round(800 / s);
+    animateToFrac(targetFrac, glideMs, () => {
+      sweepTimeout = setTimeout(runStep, pauseMs);
+    });
+  }
+
+  sweepTimeout = setTimeout(runStep, 80);
+}
+
+function animateToFrac(targetFrac, durationMs, onDone) {
+  const startFrac = currentPreviewFrac;  // captured at call time
+  const startTime = performance.now();
+
+  function frame(now) {
+    const t = Math.min((now - startTime) / durationMs, 1);
+    const e = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+    const frac = startFrac + (targetFrac - startFrac) * e;
+    currentPreviewFrac = frac;           // keep in sync so next step starts correctly
+    placePtr(setupWrap, setupStg, frac, wip);
+    if (t < 1) {
+      sweepRAF = requestAnimationFrame(frame);
+    } else {
+      currentPreviewFrac = targetFrac;   // snap to exact target
+      sweepRAF = null;
+      if (onDone) onDone();
+    }
+  }
+  sweepRAF = requestAnimationFrame(frame);
+}
+
+
+
+function stopSweep() {
+  if (sweepRAF)     { cancelAnimationFrame(sweepRAF); sweepRAF = null; }
+  if (sweepTimeout) { clearTimeout(sweepTimeout);      sweepTimeout = null; }
+  sweepDone();
+}
+
+function sweepDone() {
+  sweeping = false;
+  ptrWrap.style.transition = 'none';  // keep none until tick sets it
+  firstTick = true;
+  tick();
+  const btn = document.getElementById('sweep-btn');
+  if (btn) { btn.textContent = '▶ Sweep'; btn.onclick = startSweep; }
+}
+
+function finishSetup() {
+  cal = Object.assign({}, wip);
+  saveCal();
+  document.getElementById('setup-overlay').style.display='none';
+  firstTick=true; tick();
+}
+
+// Service worker only registers when hosted (not file://)
+
+// ── Init ──
+const sv=localStorage.getItem('lc_time_vis');
+if(sv==='0'){timeVisible=false;document.getElementById('time-strip').classList.add('hidden');document.getElementById('toggle-time-btn').style.opacity='0.85';}
+tick();
+setInterval(tick,1000);
+window.addEventListener('resize',()=>{firstTick=true;tick();});
+</script>
+</body>
+</html>
