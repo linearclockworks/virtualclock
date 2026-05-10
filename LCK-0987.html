@@ -121,17 +121,14 @@ const CLOCK_HOURS = 18, ORIGIN_HOUR = 6;
 
 // Defaults measured from Chiara face image
 // nudge6am/nudge3pm/nudgeMid: fine-tune offsets in % of face image width
-const DEFAULTS = { leftFrac:0.145, rightFrac:0.852, trackYFrac:0.554,
-                   nudge6am:0, nudge3pm:0, nudgeMid:0, sweepSpeed:1 };
+const DEFAULTS = { leftFrac:0.1450, rightFrac:0.8520, trackYFrac:0.5360, nudge6am:0.50, nudge3pm:0.85, nudgeMid:0.30, sweepSpeed:1 };
 
 let cal = loadCal();
 let wip = Object.assign({}, cal);
 let timeVisible = true, firstTick = true, sweeping = false;
 let currentPreviewFrac = 0;  // used by sweep
 
-function loadCal() { return Object.assign({}, DEFAULTS); } catch(e){}
-  return Object.assign({}, DEFAULTS);
-}
+function loadCal() { return Object.assign({}, DEFAULTS); }
 
 // ── Quadratic correction from 3 anchor nudges ──
 // Anchors at frac 0 (6AM), 0.5 (3PM), 1.0 (midnight).
@@ -223,14 +220,18 @@ let sweepRAF = null, sweepTimeout = null;
 
 function startSweep() {
   stopSweep();
-  sweeping = true;
-  ptrWrap.style.transition = 'none';  // hard disable CSS transition during sweep
+  const inSetup = document.getElementById('setup-overlay') &&
+                   document.getElementById('setup-overlay').style.display === 'flex';
+  if (!inSetup) sweeping = true;
+  // Force transition off and flush any pending browser paint before RAF starts
+  ptrWrap.style.transition = 'none';
+  void ptrWrap.offsetLeft;  // force reflow, flushes pending transitions
   const btn = document.getElementById('sweep-btn');
   btn.textContent = '◼ Stop';
   btn.onclick = stopSweep;
 
-  // Start from current time position
-  currentPreviewFrac = timeToFrac(new Date());
+  // Start from actual current position
+  currentPreviewFrac = inSetup ? currentPreviewFrac : timeToFrac(new Date());
 
   // Steps store frac only; timing is read live from wip.sweepSpeed each step
   // so slider changes take effect immediately
@@ -278,19 +279,25 @@ function startSweep() {
 }
 
 function animateToFrac(targetFrac, durationMs, onDone) {
-  const startFrac = currentPreviewFrac;  // captured at call time
+  const startFrac = currentPreviewFrac;
   const startTime = performance.now();
+  // Use setup stage if calibration overlay is open, else main clock
+  const inSetup = document.getElementById('setup-overlay') &&
+                  document.getElementById('setup-overlay').style.display === 'flex';
+  const _wrap  = inSetup ? setupWrap : ptrWrap;
+  const _stage = inSetup ? setupStg  : stage;
+  const _cal   = inSetup ? wip       : cal;
 
   function frame(now) {
     const t = Math.min((now - startTime) / durationMs, 1);
-    const e = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
-    const frac = startFrac + (targetFrac - startFrac) * e;
-    currentPreviewFrac = frac;           // keep in sync so next step starts correctly
-    placePtr(setupWrap, setupStg, frac, wip);
+    // Linear motion — no ease, feels like a physical motor
+    const frac = startFrac + (targetFrac - startFrac) * t;
+    currentPreviewFrac = frac;
+    placePtr(_wrap, _stage, frac, _cal);
     if (t < 1) {
       sweepRAF = requestAnimationFrame(frame);
     } else {
-      currentPreviewFrac = targetFrac;   // snap to exact target
+      currentPreviewFrac = targetFrac;
       sweepRAF = null;
       if (onDone) onDone();
     }
