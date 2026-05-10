@@ -116,12 +116,12 @@
 <script>
 const PTR_TIP_Y   = 0.9837;
 const PTR_TIP_X   = 0.5207;
-let PTR_H_RATIO = 0.7672;   // ptr height = this × face image height (corrected for wood extent)   // ptr height = this × face image height (corrected for wood extent)
+let PTR_H_RATIO = 0.4050;   // ptr height = this × face image height (corrected for wood extent)   // ptr height = this × face image height (corrected for wood extent)
 const CLOCK_HOURS = 18, ORIGIN_HOUR = 6;
 
 // Defaults measured from Chiara face image
 // nudge6am/nudge3pm/nudgeMid: fine-tune offsets in % of face image width
-const DEFAULTS = { leftFrac:0.145, rightFrac:0.852, trackYFrac:0.554, nudge6am:0, nudge3pm:0.0, nudgeMid:0, sweepSpeed:1.0, ptrRatio:0.7672 };
+const DEFAULTS = { leftFrac:0.145, rightFrac:0.852, trackYFrac:0.35200000000000004, nudge6am:-0.65, nudge3pm:-0.15, nudgeMid:-1, sweepSpeed:1.0, ptrRatio:0.4050 };
 
 let cal = loadCal();
 let wip = Object.assign({}, cal);
