@@ -369,7 +369,7 @@ def main():
     if mf_m:
         import json as _json
         mf = _json.loads(_b64.b64decode(mf_m.group(1)).decode())
-        mf['start_url'] = f'/{out}'
+        mf['start_url'] = f'./{out}'
         mf['name'] = f'Linear Clockworks — {safe}'
         mf['short_name'] = sku
         new_mf_b64 = _b64.b64encode(_json.dumps(mf).encode()).decode()
@@ -378,12 +378,13 @@ def main():
     if not args.calibrate:
         html = strip_calibration(html)
         # Inject PWA service worker registration
+        # Use relative path so it works on any host (GitHub Pages, local, etc.)
         sw_js_name = out.replace('.html', '-sw.js')
-        sw_js_url  = sw_js_name  # same directory
         html = html.replace('</body>',
             f'<script>\nif ("serviceWorker" in navigator) {{\n'
             f'  window.addEventListener("load", () => {{\n'
-            f'    navigator.serviceWorker.register("{sw_js_url}")\n'
+            f'    navigator.serviceWorker.register("./{sw_js_name}")\n'
+            f'      .then(r => console.log("SW registered", r.scope))\n'
             f'      .catch(e => console.log("SW reg failed:", e));\n'
             f'  }});\n'
             f'}}\n'
@@ -391,23 +392,42 @@ def main():
         with open(out, 'w') as f:
             f.write(html)
         # Write companion service worker
+        # Use a timestamp-based cache key so each rebuild busts the old cache
+        import time as _time
+        cache_ver = int(_time.time())
         cache_key = out.replace('.html', '').replace('/', '-')
         sw_content = (
-            f"""const CACHE = 'lc-{cache_key}-v1';
+            f"""// Cache version changes on every build — forces old SW to update immediately
+const CACHE = 'lc-{cache_key}-{cache_ver}';
+
 self.addEventListener('install', e => {{
-  e.waitUntil(caches.open(CACHE).then(c => c.add('/{out}')));
+  // Cache the HTML using a relative request so it works at any URL path
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.add(new Request('./{out}', {{cache: 'reload'}})))
+  );
   self.skipWaiting();
 }});
+
 self.addEventListener('activate', e => {{
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
+  // Delete all old caches for this clock
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k.startsWith('lc-{cache_key}-') && k !== CACHE)
+            .map(k => {{ console.log('SW: deleting old cache', k); return caches.delete(k); }})
+      )
+    )
+  );
   self.clients.claim();
 }});
+
 self.addEventListener('fetch', e => {{
-  e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
-  );
+  // Cache-first for same-origin HTML; network-first for everything else
+  if (e.request.url.endsWith('.html') || e.request.url.endsWith('/')) {{
+    e.respondWith(
+      caches.match(e.request).then(r => r || fetch(e.request))
+    );
+  }}
 }});
 """)
         with open(sw_js_name, 'w') as f:
