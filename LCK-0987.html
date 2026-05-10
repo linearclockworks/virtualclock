@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Linear Clock">
@@ -128,8 +129,9 @@ let wip = Object.assign({}, cal);
 let timeVisible = true, firstTick = true, sweeping = false;
 let currentPreviewFrac = 0;  // used by sweep
 
-function loadCal() { return Object.assign({}, DEFAULTS); }
-function saveCal() { localStorage.setItem('lc_cal', JSON.stringify(cal)); }
+function loadCal() { return Object.assign({}, DEFAULTS); } catch(e){}
+  return Object.assign({}, DEFAULTS);
+}
 
 // ── Quadratic correction from 3 anchor nudges ──
 // Anchors at frac 0 (6AM), 0.5 (3PM), 1.0 (midnight).
@@ -314,20 +316,7 @@ function sweepDone() {
 }
 
 
-// PWA service worker — only on HTTPS
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  const sw = `
-self.addEventListener('install', e => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== 'lc-v2').map(k => caches.delete(k)))).then(() => clients.claim())));
-self.addEventListener('fetch', e => e.respondWith(
-  caches.open('lc-v2').then(c => c.match(e.request).then(r =>
-    r || fetch(e.request).then(resp => { c.put(e.request, resp.clone()); return resp; })
-  ))
-));`;
-  navigator.serviceWorker.register(
-    URL.createObjectURL(new Blob([sw], {type:'application/javascript'}))
-  );
-}
+// PWA: no inline SW (GitHub Pages blocks blob: SW URLs)
 
 
 
