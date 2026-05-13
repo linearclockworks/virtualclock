@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import argparse, base64, io, os, sys, json, re, threading, webbrowser, time
+
+# Move heavy imports here so logging can start immediately
+print("--- Initializing Industrial Clockworks Build System ---")
 import requests as _requests
 from PIL import Image
 import numpy as np
@@ -30,7 +33,7 @@ def find_product_by_sku(sku):
     return {'title': p['title'], 'handle': p.get('handle'), 'images': [e['node']['url'] for e in p['images']['edges']]}
 
 def straightening_process(img):
-    print("  [OpenCV] Detecting skew and straightening image...")
+    print("  [OpenCV] Detecting skew and straightening source image...")
     cv_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 50, 150)
@@ -41,21 +44,19 @@ def straightening_process(img):
     return img.rotate(np.median(angles), resample=Image.BICUBIC, expand=True)
 
 def strip_calibration(html, product_url="#"):
-    """Surgical strip: Hides UI, bakes calibration, and adds Demo + Speed controls."""
     print("  [Build] Finalizing production code...")
-
-    # 1. Hide the setup UI logic
+    # 1. Hide Setup UI via CSS (Preserves DOM for Pointer Anchoring)
     hide_css = """
 <style>
   #setup-overlay, #cal-bar, #sliders, .setup-row { display: none !important; }
   .tool-btn[onclick*='showSetup'] { display: none !important; }
-  #toolbar-demo-speed { width: 70px; accent-color: var(--gold); cursor: pointer; margin: 0 5px; }
-  .demo-label { font-size: 0.8rem; color: var(--muted); font-family: monospace; }
+  #toolbar-demo-speed { width: 60px; accent-color: var(--gold); cursor: pointer; margin-left: 5px; }
+  .demo-group { display: flex; align-items: center; gap: 4px; margin-left: 10px; border-left: 1px solid var(--muted); padding-left: 10px; }
 </style>
 """
     html = html.replace('</head>', hide_css + '</head>')
 
-    # 2. Fix the loadCal function
+    # 2. Repair loadCal (Marker-to-Marker replacement)
     marker_start = 'function loadCal()'
     marker_end = 'function saveCal()'
     s_idx = html.find(marker_start)
@@ -64,35 +65,25 @@ def strip_calibration(html, product_url="#"):
         new_func = "function loadCal() { return Object.assign({}, DEFAULTS); }\n"
         html = html[:s_idx] + new_func + html[e_idx:]
 
-    # 3. Create the Demo Controls
-    # Includes a speed slider that defaults to 1x and goes to 5x
+    # 3. Demo Controls injection (Literal "Demo" text + Speed Slider)
     demo_controls = """
-  <div style="display:flex; align-items:center; gap:5px; margin-left:10px; border-left:1px solid var(--muted); padding-left:10px;">
-    <button class="tool-btn" id="toolbar-demo-btn" title="Demo Mode" onclick="startSweep()" style="font-family:'Playfair Display',serif; font-weight:600; font-size:0.9rem;">Demo</button>
-    <input type="range" id="toolbar-demo-speed" min="0.5" max="5" step="0.5" value="1" title="Demo Speed">
+  <div class="demo-group">
+    <button class="tool-btn" id="toolbar-demo-btn" onclick="startSweep()" style="font-family:'Playfair Display',serif; font-size:0.85rem; opacity:1; color:var(--gold);">Demo</button>
+    <input type="range" id="toolbar-demo-speed" min="0.5" max="5" step="0.5" value="1">
   </div>"""
 
-    # 4. Inject Details link and Demo controls
-    details_link = f'  <a href="{product_url}" target="_blank" class="tool-btn" style="text-decoration:none; color:var(--muted); font-size:0.9rem; margin-left:8px;">Details</a>'
-    html = html.replace('</div>\n\n<script>', demo_controls + "\n" + details_link + '\n</div>\n\n<script>')
+    # 4. Details Link & Toolbar injection
+    link = f'  <a href="{product_url}" target="_blank" class="tool-btn" style="text-decoration:none; color:var(--muted); font-size:0.85rem; margin-left:8px;">Details</a>'
+    html = html.replace('</div>\n\n<script>', demo_controls + "\n" + link + '\n</div>\n\n<script>')
 
-    # 5. Update the JS to use the toolbar speed slider
-    # This modifies the glide speed and the pause (800ms) to scale by the slider value
-    html = html.replace("btn.textContent = '◼ Stop';", "btn.textContent = 'Stop';")
-    html = html.replace("btn.textContent = '▶ Sweep';", "btn.textContent = 'Demo';")
-    
-    # Target the new toolbar elements
+    # 5. Production JS Adjustments
+    html = html.replace("btn.textContent = 'Stop';", "btn.textContent = 'Stop';")
+    html = html.replace("btn.textContent = 'Demo';", "btn.textContent = 'Demo';")
     html = html.replace("document.getElementById('sweep-btn')", "document.getElementById('toolbar-demo-btn')")
-    
-    # Logic to pull speed from the new toolbar slider
     html = html.replace(
         "const s = parseFloat(document.getElementById('sl-speed').value) || 1;",
         "const s = parseFloat(document.getElementById('toolbar-demo-speed').value) || 1;"
     )
-    
-    # Ensure the stop button logic targets the correct ID
-    html = html.replace("btn.onclick = stopSweep;", "document.getElementById('toolbar-demo-btn').onclick = stopSweep;")
-
     return html
 
 def main(override_args=None):
@@ -107,7 +98,7 @@ def main(override_args=None):
     product = find_product_by_sku(sku)
     if not product: sys.exit(f"SKU {sku} not found")
 
-    # Image caching
+    # Image processing and Base64 encoding
     face_cache, ptr_cache = f'{sku}_face.png', f'{sku}_ptr.png'
     if not os.path.exists(face_cache):
         img = Image.open(io.BytesIO(_requests.get(product['images'][5]).content)).convert('RGB')
@@ -120,26 +111,28 @@ def main(override_args=None):
     face_b64 = base64.b64encode(open(face_cache, 'rb').read()).decode()
     ptr_b64 = base64.b64encode(open(ptr_cache, 'rb').read()).decode()
 
+    # Load Template
     with open(TEMPLATE, 'r') as f: html = f.read()
     html = html.replace('FACE_DATA_URI', f'data:image/png;base64,{face_b64}').replace('PTR_DATA_URI', f'data:image/png;base64,{ptr_b64}')
     
-    # Set the 6AM nudge range
+    # Range expansion for 6AM calibration
     html = html.replace('id="sl-6am" min="-4" max="4"', 'id="sl-6am" min="-10" max="10"')
 
-    # Apply calibration from sidecar JSON
+    # Bake sidecar calibration data
     cal = DEFAULTS.copy()
     if os.path.exists(cal_json):
         with open(cal_json, 'r') as j:
             cal.update(json.load(j))
-            print(f"  [Build] Applying calibration: {cal_json}")
+            print(f"  [Build] Applying sidecar calibration: {cal_json}")
 
-    # BAKE GEOMETRY
+    # Static Geometry Baking
     html = re.sub(r'let PTR_H_RATIO = [\d.]+;', f'let PTR_H_RATIO = {cal.get("ptrRatio", 0.28):.4f};', html)
     html = re.sub(r'const DEFAULTS = \{[^}]+\};', f"const DEFAULTS = {json.dumps(cal)};", html)
 
     if args.calibrate:
+        print(f"  [Action] Launching calibration UI...")
         cal_out = f'{sku}_calibrate.html'
-        done_bar = f'<div id="cal-bar" style="position:fixed;top:0;left:0;right:0;background:#111;color:#fff;padding:12px;z-index:10000;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c8a96e;font-family:monospace;"><span>BUILDING: {sku}</span><button onclick="sendDone()" style="background:#c8a96e;border:none;padding:8px 24px;cursor:pointer;font-weight:bold;">DONE → SAVE & REBUILD</button></div>'
+        done_bar = f'<div id="cal-bar" style="position:fixed;top:0;left:0;right:0;background:#000;color:#fff;padding:10px;z-index:9999;display:flex;justify-content:space-between;align-items:center;font-family:monospace;border-bottom:1px solid #c8a96e;"><span>{sku}</span><button onclick="sendDone()" style="background:#c8a96e;border:none;padding:8px 20px;cursor:pointer;font-weight:bold;color:#000;">DONE → SAVE & REBUILD</button></div>'
         done_bar += '<script>function sendDone(){ fetch("/done",{method:"POST",body:localStorage.getItem("lc_cal")}).then(()=>window.close()); }</script>'
         html = html.replace('</body>', done_bar + '</body>')
         with open(cal_out, 'w') as f: f.write(html)
@@ -161,12 +154,70 @@ def main(override_args=None):
         while not cal_result: time.sleep(0.5)
         with open(cal_json, 'w') as j: json.dump(cal_result[0], j, indent=2)
         server.shutdown()
-        print(f"  [Build] Settings saved. Triggering final pass...")
+        print(f"  [Success] Calibration saved. Finalizing build pass...")
         main([sku])
     else:
+        # ── PRODUCTION PWA BUILD ──
         html = strip_calibration(html, f"https://{SHOPIFY_SHOP}/products/{product.get('handle', '')}")
-        with open(f'{sku}.html', 'w') as f: f.write(html)
-        print(f"  [Success] Build Complete: {sku}.html")
+        
+        cache_ver = int(time.time())
+        sw_name = f"{sku}-sw.js"
+        manifest_name = f"{sku}.webmanifest"
+
+        # 1. Inject PWA Metadata and SW Registration
+        pwa_head = f"""
+  <link rel="manifest" href="./{manifest_name}">
+  <meta name="theme-color" content="#0d0b08">
+  <link rel="apple-touch-icon" href="data:image/png;base64,{face_b64}">
+  <script>
+    if ('serviceWorker' in navigator) {{
+      window.addEventListener('load', () => {{
+        navigator.serviceWorker.register('./{sw_name}');
+      }});
+    }}
+  </script>
+"""
+        html = html.replace('</head>', pwa_head + '</head>')
+
+        # 2. Generate Service Worker (Using relative request for offline caching)
+        sw_content = f"""// Cache version: {cache_ver}
+const CACHE = 'lc-{sku}-{cache_ver}';
+self.addEventListener('install', e => {{
+  e.waitUntil(caches.open(CACHE).then(c => c.add(new Request('./{sku}.html', {{cache: 'reload'}}))));
+  self.skipWaiting();
+}});
+self.addEventListener('activate', e => {{
+  e.waitUntil(caches.keys().then(keys => Promise.all(
+    keys.filter(k => k.startsWith('lc-{sku}-') && k !== CACHE).map(k => caches.delete(k))
+  )));
+  self.clients.claim();
+}});
+self.addEventListener('fetch', e => {{
+  if (e.request.url.endsWith('.html') || e.request.url.endsWith('/')) {{
+    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  }}
+}});"""
+
+        # 3. Generate Manifest
+        manifest = {
+            "name": f"Linear Clock {sku}",
+            "short_name": sku,
+            "start_url": f"./{sku}.html",
+            "display": "standalone",
+            "background_color": "#0d0b08",
+            "theme_color": "#c8a96e",
+            "icons": [{"src": f"data:image/png;base64,{face_b64}", "sizes": "512x512", "type": "image/png"}]
+        }
+
+        # Write files
+        with open(f"{sku}.html", 'w') as f: f.write(html)
+        with open(sw_name, 'w') as f: f.write(sw_content)
+        with open(manifest_name, 'w') as f: json.dump(manifest, f, indent=2)
+        
+        print(f"\n[Success] PWA Build Complete:")
+        print(f"  - {sku}.html")
+        print(f"  - {sw_name}")
+        print(f"  - {manifest_name}")
 
 if __name__ == '__main__':
     main()
