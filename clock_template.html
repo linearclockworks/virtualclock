@@ -2,343 +2,306 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Linear Clock">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Industrial Linear Clockworks</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0d0b08; 
-    --gold:#c8a96e; 
-    --gold2:#e8c98e; 
-    --text:#d4c5a9; 
-    --muted:#7a6a52;
-    --clock-white: #fdfdfd;
-    --clock-black: #1a1a1a;
-    --clock-red: #cc0000;
+    --bg:#0d0b08; --gold:#c8a96e; --gold2:#e8c98e; --text:#d4c5a9; --muted:#7a6a52;
+    --clock-white: #fdfdfd; --clock-black: #1a1a1a; --clock-red: #cc0000;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{width:100%;height:100%;background:var(--bg);color:var(--text);
-    font-family:'Crimson Pro',Georgia,serif;overflow:hidden;user-select:none;}
+  body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',serif;overflow-x:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;}
 
-  /* ── Clock view ── */
-  #clock-view{display:flex;flex-direction:column;align-items:center;
-    justify-content:center;height:100vh;padding:0 20px;}
-  
-  /* CRITICAL: Anchor for the pointer */
+  #clock-view{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-grow:1;width:100%;padding:20px;}
   #clock-stage{position:relative;width:min(90vw,960px);overflow:visible;}
-  
   #face-img{width:100%;display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7));}
-  
   #ptr-wrap{position:absolute;pointer-events:none;will-change:left;z-index:10;}
   #ptr-img{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));}
 
-  /* ── Time strip ── */
-  #time-strip {
-    margin-top: 25px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.4s ease;
-  }
-  
+  #time-strip {margin-top:25px;display:flex;gap:20px;align-items:center;justify-content:center;min-height:110px;}
   .clock-face-unit {
-    display: none; 
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background-color: var(--clock-white);
-    border: 3px solid #333;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.5);
-    overflow: hidden;
-    position: relative;
+    display: none; width: 100px; height: 100px; border-radius: 50%;
+    background: var(--clock-white); border: 3px solid #333; position: relative; 
+    overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
   }
-  .clock-face-unit.visible { display: block; }
+  .clock-face-unit.visible {display:block;}
+  .clock-face-unit svg { width: 100%; height: 100%; display: block; }
 
-  /* ── Analog Specific ── */
-  #analog-clock svg { width: 100%; height: 100%; }
-  .marker { stroke: var(--clock-black); stroke-width: 4; stroke-linecap: square; }
-  .marker.minor { stroke-width: 1.5; }
-  .hand { stroke: var(--clock-black); stroke-linecap: square; transform-origin: 50% 50%; }
-  #hand-h { stroke-width: 5; }
-  #hand-m { stroke-width: 3.5; }
-  #hand-s { stroke: var(--clock-red); stroke-width: 1.5; }
-  .center-nut { fill: var(--clock-black); }
+  #sundial-clock {background:#e8dcc4; border-color:#7a6a52;}
+  .sundial-shadow {fill:rgba(0,0,0,0.25); transform-origin: 50% 65%;}
 
-  /* ── Digital Specific ── */
   #digital-clock {
-    display: none;
-    background: #1a1a1a;
-    color: #cc0000;
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: bold;
-    font-size: 1.1rem;
-    align-items: center;
-    justify-content: center;
-    width: 110px;
-    height: 50px;
-    border: 2px solid #333;
-    border-radius: 4px;
-    box-shadow: inset 0 0 8px rgba(255,0,0,0.2);
-    text-shadow: 0 0 5px rgba(204,0,0,0.5);
+    display:none; background:#1a1a1a; color:#cc0000; font-family:monospace; 
+    font-weight:bold; width:110px; height:50px; align-items:center; justify-content:center; 
+    border-radius:4px; border:2px solid #333; font-size:1.1rem;
   }
-  #digital-clock.visible { display: flex; }
+  #digital-clock.visible {display:flex;}
 
-  /* ── Antique Perspective Sundial ── */
-  #sundial-clock { background-color: #e8dcc4; overflow: visible; border: 3px solid #7a6a52; }
-  .sundial-shadow { fill: rgba(0,0,0,0.3); transform-origin: 50% 60%; }
-  .sundial-gnomon { fill: #555; stroke: #333; stroke-width: 0.5; }
-  .sundial-base { fill: #d4c590; stroke: #8c7a40; stroke-width: 1; }
+  #date-line{margin-top:15px; letter-spacing:0.1em; text-transform:uppercase; font-size:0.8rem; color:var(--gold); display:none;}
 
-  #date-line{ width: 100%; text-align: center; font-size:clamp(0.7rem,1.3vw,1rem); color:var(--gold); letter-spacing:0.18em;
-    text-transform:uppercase; margin-top:1.2em; font-style:italic;}
-
-  /* ── Toolbar ── */
-  #toolbar{position:fixed;bottom:12px;right:14px;display:flex;gap:8px;align-items:center;z-index:20;}
-  .tool-btn{background:none;border:none;color:var(--muted);font-size:1.1rem;
-    cursor:pointer;opacity:0.45;transition:all 0.2s;padding:4px;line-height:1;
-    display: flex; align-items: center; justify-content: center;}
-  .tool-btn:hover{opacity:1;}
-  .tool-btn.active{opacity:1; color: var(--gold); transform: scale(1.1);}
-  .tool-btn svg { width: 22px; height: 22px; fill: currentColor; }
-
-  /* ── Setup overlay ── */
   #setup-overlay{
-    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);
-    flex-direction:column;align-items:center;justify-content:center;
-    gap:14px;z-index:50;padding:20px;
+    display:none; width:min(90vw, 500px); background:rgba(20,18,15,0.98);
+    border:1px solid var(--muted); padding:25px; margin-top:20px;
+    flex-direction:column; align-items:center; border-radius:8px; z-index:100;
   }
+  #sliders{width:100%; display:flex; flex-direction:column; gap:15px;}
+  .sl-row{display:grid; grid-template-columns:110px 1fr 45px; align-items:center; gap:10px;}
+  .sl-row label{font-size:0.75rem; text-align:right; color:var(--muted); text-transform:uppercase;}
+  .sl-row input{accent-color:var(--gold); cursor:pointer;}
+  .sl-row span{font-family:monospace; font-size:0.85rem; color:var(--gold); text-align:right;}
+
+  #toolbar{position:fixed;bottom:12px;right:14px;display:flex;gap:12px;align-items:center;z-index:200;}
+  .tool-btn{background:none;border:none;color:var(--muted);cursor:pointer;opacity:0.45;transition:0.2s;}
+  .tool-btn.active, .tool-btn:hover{opacity:1;color:var(--gold);}
 </style>
 </head>
 <body>
 
 <div id="clock-view">
   <div id="clock-stage">
-    <img id="face-img" src="FACE_DATA_URI" alt="clock face">
-    <div id="ptr-wrap"><img id="ptr-img" src="PTR_DATA_URI" alt="pointer"></div>
+    <img id="face-img" src="FACE_DATA_URI">
+    <div id="ptr-wrap"><img id="ptr-img" src="PTR_DATA_URI"></div>
   </div>
   
   <div id="time-strip">
     <div id="sundial-clock" class="clock-face-unit">
-      <svg viewBox="0 0 100 100" style="overflow: visible;">
-        <ellipse cx="50" cy="65" rx="45" ry="25" class="sundial-base"/>
-        <ellipse cx="50" cy="60" rx="45" ry="25" fill="#e8dcc4" stroke="#7a6a52" stroke-width="2"/>
-        <g id="sun-shadow-wrap" style="transform-origin: 50% 60%;">
-           <path id="sun-shadow" d="M50,60 L50,20 L65,60 Z" class="sundial-shadow" />
-        </g>
-        <path d="M50,60 L50,25 L53,60 Z" class="sundial-gnomon" />
-        <circle cx="50" cy="60" r="1.5" fill="#333"/>
-      </svg>
-    </div>
-
-    <div id="analog-clock" class="clock-face-unit visible">
       <svg viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="50" fill="var(--clock-white)"/>
-        <line class="marker" x1="50" y1="0" x2="50" y2="12" transform="rotate(0 50 50)"/>
-        <line class="marker" x1="50" y1="0" x2="50" y2="12" transform="rotate(90 50 50)"/>
-        <line class="marker" x1="50" y1="0" x2="50" y2="12" transform="rotate(180 50 50)"/>
-        <line class="marker" x1="50" y1="0" x2="50" y2="12" transform="rotate(270 50 50)"/>
-        <line id="hand-h" class="hand" x1="50" y1="50" x2="50" y2="28" />
-        <line id="hand-m" class="hand" x1="50" y1="50" x2="50" y2="15" />
-        <line id="hand-s" class="hand" x1="50" y1="58" x2="50" y2="8" />
-        <circle class="center-nut" cx="50" cy="50" r="3.5"/>
+        <ellipse cx="50" cy="70" rx="48" ry="25" fill="#d4c590" stroke="#8c7a40" stroke-width="1"/>
+        <ellipse cx="50" cy="65" rx="48" ry="25" fill="#e8dcc4" stroke="#7a6a52" stroke-width="2"/>
+        <g id="sun-shadow-wrap"><path d="M50,65 L50,15 L65,65 Z" class="sundial-shadow"/></g>
+        <path d="M50,65 L50,25 L55,65 Z" fill="#555" stroke="#333" stroke-width="0.5"/>
+        <circle cx="50" cy="65" r="2" fill="#333"/>
       </svg>
     </div>
-
+    <div id="analog-clock" class="clock-face-unit">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="48" fill="white" stroke="#333" stroke-width="1"/>
+        <line x1="50" y1="2" x2="50" y2="15" stroke="black" stroke-width="5"/>
+        <line x1="98" y1="50" x2="88" y2="50" stroke="black" stroke-width="4"/>
+        <line x1="50" y1="98" x2="50" y2="88" stroke="black" stroke-width="4"/>
+        <line x1="2" y1="50" x2="15" y2="50" stroke="black" stroke-width="4"/>
+        <line id="hand-h" x1="50" y1="50" x2="50" y2="30" stroke="black" stroke-width="6" stroke-linecap="round" style="transform-origin: 50px 50px;"/>
+        <line id="hand-m" x1="50" y1="50" x2="50" y2="18" stroke="black" stroke-width="4" stroke-linecap="round" style="transform-origin: 50px 50px;"/>
+        <line id="hand-s" x1="50" y1="55" x2="50" y2="10" stroke="red" stroke-width="2" style="transform-origin: 50px 50px;"/>
+        <circle cx="50" cy="50" r="4" fill="black"/>
+      </svg>
+    </div>
     <div id="digital-clock">00:00:00</div>
+  </div>
+  <div id="date-line">Loading...</div>
 
-    <div id="date-line">loading…</div>
+  <div id="setup-overlay">
+    <h3 style="margin-bottom:20px; font-family:'Playfair Display'; color:var(--gold2);">Calibration</h3>
+    <div id="sliders">
+      <div class="sl-row"><label>6 AM</label><input type="range" id="sl-6am" min="-10" max="10" step="0.1" oninput="onAnchor('6am', this.value)"><span id="val-6am">0</span></div>
+      <div class="sl-row"><label>3 PM</label><input type="range" id="sl-3pm" min="-10" max="10" step="0.1" oninput="onAnchor('3pm', this.value)"><span id="val-3pm">0</span></div>
+      <div class="sl-row"><label>Midnight</label><input type="range" id="sl-mid" min="-10" max="10" step="0.1" oninput="onAnchor('mid', this.value)"><span id="val-mid">0</span></div>
+      <div class="sl-row"><label>Track Y</label><input type="range" id="sl-track" min="30" max="80" step="0.1" oninput="onSl('track', this.value)"><span id="val-track">55%</span></div>
+      <div class="sl-row"><label>Ptr Size</label><input type="range" id="sl-ptrRatio" min="0.1" max="0.6" step="0.01" oninput="onSl('ptrRatio', this.value)"><span id="val-ptrRatio">0.28</span></div>
+    </div>
+    <div style="margin-top:25px; display:flex; gap:15px;">
+      <button onclick="resetSetup()" style="background:none; border:1px solid var(--gold); color:var(--gold); padding:8px 15px; cursor:pointer;">Reset</button>
+      <button onclick="finishSetup()" style="background:var(--gold); border:none; color:black; padding:8px 25px; cursor:pointer; font-weight:bold;">Close</button>
+    </div>
   </div>
 </div>
 
-<div id="setup-overlay">
-  </div>
-
 <div id="toolbar">
-  <button class="tool-btn" id="btn-sundial" onclick="toggleClock('sundial')">
-    <svg viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,13.91 19.33,15.65 18.2,17L12,12V4M11,13.29L6.29,18L5,16.71L10.29,11.42L11,13.29Z" /></svg>
-  </button>
-  <button class="tool-btn active" id="btn-analog" onclick="toggleClock('analog')">🕐</button>
-  <button class="tool-btn" id="btn-digital" onclick="toggleClock('digital')">
-    <svg viewBox="0 0 24 24"><path d="M5,7H19V17H5V7M7,9V15H9V9H7M11,9V11H13V9H11M11,13V15H13V13H11M15,9V15H17V9H15Z" /></svg>
-  </button>
-  <button class="tool-btn" onclick="showSetup()">⚙</button>
+  <button class="tool-btn" id="btn-sundial" onclick="toggleClock('sundial')">☀️</button>
+  <button class="tool-btn" id="btn-analog" onclick="toggleClock('analog')">🕒</button>
+  <button class="tool-btn" id="btn-digital" onclick="toggleClock('digital')">🔢</button>
+  <button class="tool-btn" onclick="showSetup()">⚙️</button>
 </div>
 
 <script>
-const PTR_TIP_Y = 0.9217;
-const PTR_TIP_X = 0.5207;
+const PTR_TIP_Y = 0.9217, PTR_TIP_X = 0.5207;
 let PTR_H_RATIO = 0.28;
 const CLOCK_HOURS = 18, ORIGIN_HOUR = 6;
-
 const DEFAULTS = { leftFrac:0.12, rightFrac:0.852, trackYFrac:0.554, nudge6am:0, nudge3pm:0, nudgeMid:0, sweepSpeed:1, ptrRatio:0.28 };
 
-let cal = loadCal();
-let wip = Object.assign({}, cal);
-let sweeping = false;
+let cal = loadCal(), wip = Object.assign({}, cal);
+let sweeping = false, isCalibrating = false;
 let currentPreviewFrac = 0;
-
-let showAnalog = true, showDigital = false, showSundial = false;
+let showAnalog = false, showDigital = false, showSundial = false;
 
 function loadCal() {
-  try { 
-    const s = localStorage.getItem('lc_cal'); 
-    if(s) return JSON.parse(s); 
-  } catch(e){}
-  return Object.assign({}, DEFAULTS);
+  try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('lc_cal'))); } 
+  catch(e){ return DEFAULTS; }
 }
-
 function saveCal() { localStorage.setItem('lc_cal', JSON.stringify(cal)); }
 
-function toggleClock(type) {
-  if (type === 'analog') {
-    showAnalog = !showAnalog;
-    document.getElementById('analog-clock').classList.toggle('visible', showAnalog);
-    document.getElementById('btn-analog').classList.toggle('active', showAnalog);
-  } else if (type === 'digital') {
-    showDigital = !showDigital;
-    document.getElementById('digital-clock').classList.toggle('visible', showDigital);
-    document.getElementById('btn-digital').classList.toggle('active', showDigital);
-  } else if (type === 'sundial') {
-    showSundial = !showSundial;
-    document.getElementById('sundial-clock').classList.toggle('visible', showSundial);
-    document.getElementById('btn-sundial').classList.toggle('active', showSundial);
-  }
+function toggleClock(t) {
+  const el = document.getElementById(t + '-clock');
+  const btn = document.getElementById('btn-' + t);
+  if(t==='analog') showAnalog = !showAnalog;
+  if(t==='digital') showDigital = !showDigital;
+  if(t==='sundial') showSundial = !showSundial;
+  el.classList.toggle('visible');
+  btn.classList.toggle('active');
+  document.getElementById('date-line').style.display = (showAnalog || showDigital || showSundial) ? 'block' : 'none';
 }
 
 function tick() {
   const now = new Date();
   const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  document.getElementById('hand-h').style.transform = `rotate(${(h%12)*30 + m*0.5}deg)`;
+  document.getElementById('hand-m').style.transform = `rotate(${m*6}deg)`;
+  document.getElementById('hand-s').style.transform = `rotate(${s*6}deg)`;
+  document.getElementById('digital-clock').textContent = now.toLocaleTimeString([],{hour12:false});
+  const sunRot = (((h%12) + m/60 + s/3600)/12) * 180 - 90;
+  document.getElementById('sun-shadow-wrap').style.transform = `rotate(${sunRot}deg)`;
+  document.getElementById('date-line').textContent = now.toDateString();
 
-  // Analog
-  const hDeg = (h % 12) * 30 + m * 0.5;
-  document.getElementById('hand-h').style.transform = `rotate(${hDeg}deg)`;
-  document.getElementById('hand-m').style.transform = `rotate(${m * 6}deg)`;
-  document.getElementById('hand-s').style.transform = `rotate(${s * 6}deg)`;
-
-  // Digital
-  document.getElementById('digital-clock').textContent = now.toLocaleTimeString([], {hour12:false});
-
-  // Sundial (Antique Perspective Shadow)
-  const sunFrac = ((h % 12) + m/60 + s/3600) / 12;
-  const shadowRotation = (sunFrac * 180) - 90;
-  const shadowEl = document.getElementById('sun-shadow-wrap');
-  if (shadowEl) shadowEl.style.transform = `rotate(${shadowRotation}deg)`;
-
-  // Date
-  const D=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const M=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('date-line').textContent= D[now.getDay()]+' · '+M[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
-
-  if (!sweeping) placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), timeToFrac(now), cal);
+  if(!sweeping && !isCalibrating) {
+    currentPreviewFrac = timeToFrac(now);
+    placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), currentPreviewFrac, cal);
+  }
 }
 
 function correctedFrac(t, c) {
-  const refSpan = (c.rightFrac + c.nudgeMid/100) - (c.leftFrac + c.nudge6am/100);
+  const left = c.leftFrac + (c.nudge6am||0)/100;
+  const right = c.rightFrac + (c.nudgeMid||0)/100;
+  const refSpan = right - left;
   if (refSpan <= 0) return t;
-  const d3 = (c.nudge3pm/100) / refSpan;
+  const d3 = ((c.nudge3pm||0)/100) / refSpan;
   const m = Math.max(0.02, Math.min(0.98, 0.5 + d3));
   const a = 2 - 4*m, b = 4*m - 1;
   return a*t*t + b*t;
 }
 
-function placePtr(wrap, stageEl, frac, c) {
-  const sw = stageEl.offsetWidth, sh = stageEl.offsetHeight;
-  if (!sw || !sh) return;
+function placePtr(w, s, f, c) {
+  const sw = s.offsetWidth, sh = s.offsetHeight;
+  if(!sw) return;
   const pH = sh * PTR_H_RATIO;
-  Object.assign(wrap.style, {
-    height: pH + 'px',
-    top: (c.trackYFrac * sh - pH * PTR_TIP_Y) + 'px'
-  });
-  const left = c.leftFrac + c.nudge6am/100, right = c.rightFrac + c.nudgeMid/100;
-  const tipX = (left + correctedFrac(frac, c) * (right - left)) * sw;
-  wrap.style.left = (tipX - (wrap.offsetWidth || pH * 0.56) * PTR_TIP_X) + 'px';
-}
-
-function timeToFrac(now) {
-  const m=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
-  const span=CLOCK_HOURS*60,orig=ORIGIN_HOUR*60,day=24*60;
-  return(((m-orig)%day+day)%day%span)/span;
-}
-
-// ── Animation Engine for Demo Mode ──
-let sweepRAF = null, sweepTimeout = null;
-
-function startSweep() {
-  stopSweep();
-  sweeping = true;
-  const btn = document.getElementById('toolbar-demo-btn') || document.getElementById('sweep-btn');
-  if (btn) {
-    btn.textContent = 'Stop';
-    btn.onclick = stopSweep;
-  }
+  w.style.height = pH + 'px';
+  w.style.top = (c.trackYFrac * sh - pH * PTR_TIP_Y) + 'px';
+  const left = c.leftFrac + (c.nudge6am||0)/100;
+  const right = c.rightFrac + (c.nudgeMid||0)/100;
   
-  const daySteps = Array.from({length: CLOCK_HOURS + 1}, (_, i) => i / CLOCK_HOURS);
-  const nightSteps = Array.from({length: 6}, (_, i) => (5 - i) / 6);
+  // FIX: Force start at the nudge point
+  const tipX = (left + correctedFrac(f, c) * (right - left)) * sw;
+  w.style.left = (tipX - (w.offsetWidth || pH*0.5) * PTR_TIP_X) + 'px';
+}
+
+function timeToFrac(n) {
+  const m = n.getHours()*60 + n.getMinutes() + n.getSeconds()/60;
+  const span = 18*60, start = 6*60;
+  return ((m - start + 1440) % 1440) / span;
+}
+
+let sweepRAF = null, sweepTimeout = null;
+function startSweep() {
+  if (sweeping) { stopSweep(); return; }
+  sweeping = true; isCalibrating = false;
+  const btn = document.getElementById('toolbar-demo-btn');
+  if(btn) btn.textContent = 'Stop';
+  
+  const forward = Array.from({length: 19}, (_, i) => i / 18);
+  const backward = [0.833, 0.666, 0.5, 0.333, 0.166, 0];
+  const steps = forward.concat(backward);
+  
   let stepIdx = 0;
+  currentPreviewFrac = 0;
 
   function runStep() {
-    if (stepIdx >= daySteps.length + nightSteps.length) {
-      const nowFrac = timeToFrac(new Date());
-      animateToFrac(nowFrac, 1200, () => { currentPreviewFrac = nowFrac; sweepDone(); });
-      return;
-    }
-    const night = stepIdx >= daySteps.length;
-    const targetFrac = night ? nightSteps[stepIdx - daySteps.length] : daySteps[stepIdx];
-    stepIdx++;
+    if(!sweeping) return;
+    if(stepIdx >= steps.length) { sweepDone(); return; }
+    const target = steps[stepIdx++];
     const s = parseFloat(document.getElementById('toolbar-demo-speed')?.value) || 1;
-    const glideMs = night ? (2100/s) : (stepIdx===1 ? 1200/s : 700/s);
-    animateToFrac(targetFrac, glideMs, () => { sweepTimeout = setTimeout(runStep, 800/s); });
+    animateToFrac(target, 700/s, () => {
+      if(sweeping) sweepTimeout = setTimeout(runStep, 400/s);
+    });
   }
-  sweepTimeout = setTimeout(runStep, 80);
+  runStep();
 }
 
-function animateToFrac(targetFrac, durationMs, onDone) {
-  const startFrac = currentPreviewFrac;
+function animateToFrac(target, duration, onDone) {
+  const start = currentPreviewFrac;
   const startTime = performance.now();
-  const _wrap  = document.getElementById('ptr-wrap');
-  const _stage = document.getElementById('clock-stage');
-
   function frame(now) {
-    const t = Math.min((now - startTime) / durationMs, 1);
-    const frac = startFrac + (targetFrac - startFrac) * t;
-    currentPreviewFrac = frac;
-    placePtr(_wrap, _stage, frac, cal);
-    if (t < 1) sweepRAF = requestAnimationFrame(frame);
-    else { currentPreviewFrac = targetFrac; sweepRAF = null; if (onDone) onDone(); }
+    if(!sweeping && !isCalibrating) return;
+    const progress = Math.min((now - startTime) / duration, 1);
+    
+    // Smooth Quadratic Ease
+    const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+    
+    currentPreviewFrac = start + (target - start) * ease;
+    placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), currentPreviewFrac, cal);
+    if(progress < 1) sweepRAF = requestAnimationFrame(frame);
+    else if(onDone) onDone();
   }
   sweepRAF = requestAnimationFrame(frame);
 }
 
 function stopSweep() {
-  if (sweepRAF) cancelAnimationFrame(sweepRAF);
-  if (sweepTimeout) clearTimeout(sweepTimeout);
+  if(sweepRAF) cancelAnimationFrame(sweepRAF);
+  if(sweepTimeout) clearTimeout(sweepTimeout);
   sweepDone();
 }
 
 function sweepDone() {
   sweeping = false;
+  const btn = document.getElementById('toolbar-demo-btn');
+  if(btn) btn.textContent = 'Demo';
   tick();
-  const btn = document.getElementById('toolbar-demo-btn') || document.getElementById('sweep-btn');
-  if (btn) {
-    btn.textContent = 'Demo';
-    btn.onclick = startSweep;
-  }
 }
 
-function showSetup() { /* Logic handled by build script */ }
+function showSetup() {
+  isCalibrating = true; sweeping = false;
+  if(sweepRAF) cancelAnimationFrame(sweepRAF);
+  document.getElementById('setup-overlay').style.display = 'flex';
+  syncSlidersFromWip();
+}
 
-const _faceImg = document.getElementById('face-img');
-function _startClock() { tick(); setInterval(tick,1000); }
-if (_faceImg.complete) _startClock(); else _faceImg.addEventListener('load', _startClock);
-window.addEventListener('resize', tick);
+function syncSlidersFromWip() {
+  document.getElementById('sl-6am').value = wip.nudge6am || 0;
+  document.getElementById('sl-3pm').value = wip.nudge3pm || 0;
+  document.getElementById('sl-mid').value = wip.nudgeMid || 0;
+  document.getElementById('sl-track').value = wip.trackYFrac * 100;
+  document.getElementById('sl-ptrRatio').value = wip.ptrRatio;
+  updateLabels();
+}
+
+function updateLabels() {
+  document.getElementById('val-6am').textContent = wip.nudge6am;
+  document.getElementById('val-3pm').textContent = wip.nudge3pm;
+  document.getElementById('val-mid').textContent = wip.nudgeMid;
+  document.getElementById('val-track').textContent = Math.round(wip.trackYFrac * 100) + '%';
+  document.getElementById('val-ptrRatio').textContent = wip.ptrRatio;
+}
+
+function onAnchor(a, v) { 
+  if(a==='6am') wip.nudge6am = parseFloat(v);
+  if(a==='3pm') wip.nudge3pm = parseFloat(v);
+  if(a==='mid') wip.nudgeMid = parseFloat(v);
+  updateLabels();
+  let f = (a==='6am') ? 0 : (a==='mid' ? 1 : 0.5);
+  placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), f, wip);
+}
+
+function onSl(s, v) {
+  if(s==='track') wip.trackYFrac = parseFloat(v)/100;
+  if(s==='ptrRatio') { wip.ptrRatio = parseFloat(v); PTR_H_RATIO = wip.ptrRatio; }
+  updateLabels();
+  placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), 0.5, wip);
+}
+
+function finishSetup() {
+  cal = Object.assign({}, wip);
+  saveCal();
+  document.getElementById('setup-overlay').style.display = 'none';
+  isCalibrating = false; tick();
+}
+
+function resetSetup() {
+  localStorage.removeItem('lc_cal');
+  cal = Object.assign({}, DEFAULTS); wip = Object.assign({}, cal);
+  syncSlidersFromWip(); tick();
+}
+
+setInterval(tick, 1000); tick();
+window.onresize = tick;
 </script>
 </body>
 </html>
