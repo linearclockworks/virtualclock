@@ -13,37 +13,36 @@
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',serif;overflow-x:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;}
 
-  #clock-view{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-grow:1;width:100%;padding:20px;}
+  #clock-view{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-grow:1;width:100%;padding:20px;position:relative;}
   #clock-stage{position:relative;width:min(90vw,960px);overflow:visible;}
   #face-img{width:100%;display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7));}
+  
   #ptr-wrap{position:absolute;pointer-events:none;will-change:left;z-index:10;}
   #ptr-img{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));}
 
-  #time-strip {margin-top:25px;display:flex;gap:20px;align-items:center;justify-content:center;min-height:110px;}
+  #time-strip {margin-top:25px;display:flex;gap:20px;align-items:center;justify-content:center;min-height:180px; z-index:20; position:relative;}
+  
   .clock-face-unit {
-    display: none; width: 100px; height: 100px; border-radius: 50%;
-    background: var(--clock-white); border: 3px solid #333; position: relative; 
-    overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    display: none; width: 160px; height: 160px; border-radius: 50%;
+    background: var(--clock-white); border: 4px solid #333; position: relative; 
+    overflow: visible; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
   }
   .clock-face-unit.visible {display:block;}
-  .clock-face-unit svg { width: 100%; height: 100%; display: block; }
-
-  #sundial-clock {background:#e8dcc4; border-color:#7a6a52;}
-  .sundial-shadow {fill:rgba(0,0,0,0.25); transform-origin: 50% 65%;}
 
   #digital-clock {
     display:none; background:#1a1a1a; color:#cc0000; font-family:monospace; 
-    font-weight:bold; width:110px; height:50px; align-items:center; justify-content:center; 
-    border-radius:4px; border:2px solid #333; font-size:1.1rem;
+    font-weight:bold; min-width:180px; height:60px; align-items:center; justify-content:center; 
+    border-radius:4px; border:2px solid #333; font-size:1.4rem; padding:0 15px;
   }
   #digital-clock.visible {display:flex;}
-
   #date-line{margin-top:15px; letter-spacing:0.1em; text-transform:uppercase; font-size:0.8rem; color:var(--gold); display:none;}
 
   #setup-overlay{
     display:none; width:min(90vw, 500px); background:rgba(20,18,15,0.98);
-    border:1px solid var(--muted); padding:25px; margin-top:20px;
-    flex-direction:column; align-items:center; border-radius:8px; z-index:100;
+    border:1px solid var(--muted); padding:25px; 
+    margin-top:-140px; /* Moves panel up into the empty time-strip space */
+    flex-direction:column; align-items:center; border-radius:8px; z-index:1000;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
   }
   #sliders{width:100%; display:flex; flex-direction:column; gap:15px;}
   .sl-row{display:grid; grid-template-columns:110px 1fr 45px; align-items:center; gap:10px;}
@@ -51,7 +50,7 @@
   .sl-row input{accent-color:var(--gold); cursor:pointer;}
   .sl-row span{font-family:monospace; font-size:0.85rem; color:var(--gold); text-align:right;}
 
-  #toolbar{position:fixed;bottom:12px;right:14px;display:flex;gap:12px;align-items:center;z-index:200;}
+  #toolbar{position:fixed;bottom:12px;right:14px;display:flex;gap:12px;align-items:center;z-index:2000;}
   .tool-btn{background:none;border:none;color:var(--muted);cursor:pointer;opacity:0.45;transition:0.2s;}
   .tool-btn.active, .tool-btn:hover{opacity:1;color:var(--gold);}
 </style>
@@ -65,40 +64,33 @@
   </div>
   
   <div id="time-strip">
-    <div id="sundial-clock" class="clock-face-unit">
-      <svg viewBox="0 0 100 100">
-        <ellipse cx="50" cy="70" rx="48" ry="25" fill="#d4c590" stroke="#8c7a40" stroke-width="1"/>
-        <ellipse cx="50" cy="65" rx="48" ry="25" fill="#e8dcc4" stroke="#7a6a52" stroke-width="2"/>
-        <g id="sun-shadow-wrap"><path d="M50,65 L50,15 L65,65 Z" class="sundial-shadow"/></g>
-        <path d="M50,65 L50,25 L55,65 Z" fill="#555" stroke="#333" stroke-width="0.5"/>
-        <circle cx="50" cy="65" r="2" fill="#333"/>
-      </svg>
-    </div>
     <div id="analog-clock" class="clock-face-unit">
-      <svg viewBox="0 0 100 100">
+      <svg viewBox="0 0 100 100" style="overflow:visible;">
         <circle cx="50" cy="50" r="48" fill="white" stroke="#333" stroke-width="1"/>
-        <line x1="50" y1="2" x2="50" y2="15" stroke="black" stroke-width="5"/>
-        <line x1="98" y1="50" x2="88" y2="50" stroke="black" stroke-width="4"/>
-        <line x1="50" y1="98" x2="50" y2="88" stroke="black" stroke-width="4"/>
-        <line x1="2" y1="50" x2="15" y2="50" stroke="black" stroke-width="4"/>
-        <line id="hand-h" x1="50" y1="50" x2="50" y2="30" stroke="black" stroke-width="6" stroke-linecap="round" style="transform-origin: 50px 50px;"/>
-        <line id="hand-m" x1="50" y1="50" x2="50" y2="18" stroke="black" stroke-width="4" stroke-linecap="round" style="transform-origin: 50px 50px;"/>
-        <line id="hand-s" x1="50" y1="55" x2="50" y2="10" stroke="red" stroke-width="2" style="transform-origin: 50px 50px;"/>
+        <g font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="black" font-weight="900">
+          <text x="50" y="18">12</text><text x="68" y="23">1</text><text x="81" y="36">2</text>
+          <text x="86" y="55">3</text><text x="81" y="74">4</text><text x="68" y="87">5</text>
+          <text x="50" y="92">6</text><text x="32" y="87">7</text><text x="19" y="74">8</text>
+          <text x="14" y="55">9</text><text x="19" y="36">10</text><text x="32" y="23">11</text>
+        </g>
+        <line id="hand-h" x1="50" y1="50" x2="50" y2="32" stroke="black" stroke-width="7" stroke-linecap="round" style="transform-origin: 50px 50px;"/>
+        <line id="hand-m" x1="50" y1="50" x2="50" y2="15" stroke="black" stroke-width="4" stroke-linecap="round" style="transform-origin: 50px 50px;"/>
+        <line id="hand-s" x1="50" y1="58" x2="50" y2="8" stroke="#cc0000" stroke-width="2" stroke-linecap="round" style="transform-origin: 50px 50px;"/>
         <circle cx="50" cy="50" r="4" fill="black"/>
       </svg>
     </div>
-    <div id="digital-clock">00:00:00</div>
+    <div id="digital-clock">12:00:00 PM</div>
   </div>
   <div id="date-line">Loading...</div>
 
   <div id="setup-overlay">
     <h3 style="margin-bottom:20px; font-family:'Playfair Display'; color:var(--gold2);">Calibration</h3>
     <div id="sliders">
-      <div class="sl-row"><label>6 AM</label><input type="range" id="sl-6am" min="-10" max="10" step="0.1" oninput="onAnchor('6am', this.value)"><span id="val-6am">0</span></div>
-      <div class="sl-row"><label>3 PM</label><input type="range" id="sl-3pm" min="-10" max="10" step="0.1" oninput="onAnchor('3pm', this.value)"><span id="val-3pm">0</span></div>
-      <div class="sl-row"><label>Midnight</label><input type="range" id="sl-mid" min="-10" max="10" step="0.1" oninput="onAnchor('mid', this.value)"><span id="val-mid">0</span></div>
-      <div class="sl-row"><label>Track Y</label><input type="range" id="sl-track" min="30" max="80" step="0.1" oninput="onSl('track', this.value)"><span id="val-track">55%</span></div>
-      <div class="sl-row"><label>Ptr Size</label><input type="range" id="sl-ptrRatio" min="0.1" max="0.6" step="0.01" oninput="onSl('ptrRatio', this.value)"><span id="val-ptrRatio">0.28</span></div>
+      <div class="sl-row"><label>6 AM</label><input type="range" id="sl-6am" min="-15" max="15" step="0.1" oninput="onAnchor('6am', this.value)"><span id="val-6am">0</span></div>
+      <div class="sl-row"><label>3 PM</label><input type="range" id="sl-3pm" min="-15" max="15" step="0.1" oninput="onAnchor('3pm', this.value)"><span id="val-3pm">0</span></div>
+      <div class="sl-row"><label>Midnight</label><input type="range" id="sl-mid" min="-15" max="15" step="0.1" oninput="onAnchor('mid', this.value)"><span id="val-mid">0</span></div>
+      <div class="sl-row"><label>Track Y</label><input type="range" id="sl-track" min="20" max="90" step="0.1" oninput="onSl('track', this.value)"><span id="val-track">55%</span></div>
+      <div class="sl-row"><label>Ptr Size</label><input type="range" id="sl-ptrRatio" min="0.1" max="0.8" step="0.01" oninput="onSl('ptrRatio', this.value)"><span id="val-ptrRatio">0.28</span></div>
     </div>
     <div style="margin-top:25px; display:flex; gap:15px;">
       <button onclick="resetSetup()" style="background:none; border:1px solid var(--gold); color:var(--gold); padding:8px 15px; cursor:pointer;">Reset</button>
@@ -108,7 +100,6 @@
 </div>
 
 <div id="toolbar">
-  <button class="tool-btn" id="btn-sundial" onclick="toggleClock('sundial')">☀️</button>
   <button class="tool-btn" id="btn-analog" onclick="toggleClock('analog')">🕒</button>
   <button class="tool-btn" id="btn-digital" onclick="toggleClock('digital')">🔢</button>
   <button class="tool-btn" onclick="showSetup()">⚙️</button>
@@ -116,14 +107,12 @@
 
 <script>
 const PTR_TIP_Y = 0.9217, PTR_TIP_X = 0.5207;
-let PTR_H_RATIO = 0.28;
-const CLOCK_HOURS = 18, ORIGIN_HOUR = 6;
 const DEFAULTS = { leftFrac:0.12, rightFrac:0.852, trackYFrac:0.554, nudge6am:0, nudge3pm:0, nudgeMid:0, sweepSpeed:1, ptrRatio:0.28 };
 
 let cal = loadCal(), wip = Object.assign({}, cal);
 let sweeping = false, isCalibrating = false;
 let currentPreviewFrac = 0;
-let showAnalog = false, showDigital = false, showSundial = false;
+let showAnalog = false, showDigital = false;
 
 function loadCal() {
   try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('lc_cal'))); } 
@@ -136,26 +125,55 @@ function toggleClock(t) {
   const btn = document.getElementById('btn-' + t);
   if(t==='analog') showAnalog = !showAnalog;
   if(t==='digital') showDigital = !showDigital;
-  if(t==='sundial') showSundial = !showSundial;
   el.classList.toggle('visible');
   btn.classList.toggle('active');
-  document.getElementById('date-line').style.display = (showAnalog || showDigital || showSundial) ? 'block' : 'none';
+  document.getElementById('date-line').style.display = (showAnalog || showDigital) ? 'block' : 'none';
 }
 
 function tick() {
   const now = new Date();
-  const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
-  document.getElementById('hand-h').style.transform = `rotate(${(h%12)*30 + m*0.5}deg)`;
-  document.getElementById('hand-m').style.transform = `rotate(${m*6}deg)`;
-  document.getElementById('hand-s').style.transform = `rotate(${s*6}deg)`;
-  document.getElementById('digital-clock').textContent = now.toLocaleTimeString([],{hour12:false});
-  const sunRot = (((h%12) + m/60 + s/3600)/12) * 180 - 90;
-  document.getElementById('sun-shadow-wrap').style.transform = `rotate(${sunRot}deg)`;
-  document.getElementById('date-line').textContent = now.toDateString();
-
   if(!sweeping && !isCalibrating) {
+    document.getElementById('hand-s').style.display = "block";
     currentPreviewFrac = timeToFrac(now);
-    placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), currentPreviewFrac, cal);
+    updateAllClocks(currentPreviewFrac);
+  }
+  document.getElementById('date-line').textContent = now.toDateString();
+}
+
+function updateAllClocks(frac, isReturning = false) {
+  const wrap = document.getElementById('ptr-wrap');
+  const stage = document.getElementById('clock-stage');
+  placePtr(wrap, stage, frac, cal);
+
+  let totalMinutes;
+  if (!isReturning) {
+    totalMinutes = frac * (18 * 60);
+  } else {
+    // Math: Map frac 1.0->0.0 to time 18:00->24:00/06:00 (Forward only)
+    const nightMins = (1 - frac) * (6 * 60);
+    totalMinutes = (18 * 60) + nightMins;
+  }
+
+  const vHour24 = (6 + Math.floor(totalMinutes / 60)) % 24;
+  const vMin = Math.floor(totalMinutes % 60);
+  const vSec = Math.floor((totalMinutes * 60) % 60);
+
+  // Digital 12-hour AM/PM
+  let h12 = vHour24 % 12; h12 = h12 === 0 ? 12 : h12;
+  const ampm = vHour24 >= 12 ? "PM" : "AM";
+  document.getElementById('digital-clock').textContent = 
+    `${String(h12).padStart(2,'0')}:${String(vMin).padStart(2,'0')}:${String(vSec).padStart(2,'0')} ${ampm}`;
+
+  // Analog Hands (Glide)
+  document.getElementById('hand-h').style.transform = `rotate(${vHour24 * 30 + vMin * 0.5}deg)`;
+  document.getElementById('hand-m').style.transform = `rotate(${vMin * 6}deg)`;
+  
+  const sHand = document.getElementById('hand-s');
+  if (!sweeping) {
+    sHand.style.display = "block";
+    sHand.style.transform = `rotate(${vSec * 6}deg)`;
+  } else {
+    sHand.style.display = "none";
   }
 }
 
@@ -166,68 +184,66 @@ function correctedFrac(t, c) {
   if (refSpan <= 0) return t;
   const d3 = ((c.nudge3pm||0)/100) / refSpan;
   const m = Math.max(0.02, Math.min(0.98, 0.5 + d3));
-  const a = 2 - 4*m, b = 4*m - 1;
-  return a*t*t + b*t;
+  return (2 - 4*m)*t*t + (4*m - 1)*t;
 }
 
 function placePtr(w, s, f, c) {
   const sw = s.offsetWidth, sh = s.offsetHeight;
   if(!sw) return;
-  const pH = sh * PTR_H_RATIO;
+  const pH = sh * (c.ptrRatio || 0.28);
   w.style.height = pH + 'px';
   w.style.top = (c.trackYFrac * sh - pH * PTR_TIP_Y) + 'px';
   const left = c.leftFrac + (c.nudge6am||0)/100;
   const right = c.rightFrac + (c.nudgeMid||0)/100;
-  
-  // FIX: Force start at the nudge point
-  const tipX = (left + correctedFrac(f, c) * (right - left)) * sw;
-  w.style.left = (tipX - (w.offsetWidth || pH*0.5) * PTR_TIP_X) + 'px';
+  const tipX = (left + correctedFrac(Math.max(0,f), c) * (right - left)) * sw;
+  w.style.left = (tipX - (w.offsetWidth || pH*0.5) * PTR_TIP_X) * 1 + 'px';
 }
 
 function timeToFrac(n) {
   const m = n.getHours()*60 + n.getMinutes() + n.getSeconds()/60;
-  const span = 18*60, start = 6*60;
-  return ((m - start + 1440) % 1440) / span;
+  return ((m - 360 + 1440) % 1440) / 1080;
 }
 
 let sweepRAF = null, sweepTimeout = null;
 function startSweep() {
   if (sweeping) { stopSweep(); return; }
   sweeping = true; isCalibrating = false;
+  document.getElementById('hand-s').style.display = "none";
   const btn = document.getElementById('toolbar-demo-btn');
   if(btn) btn.textContent = 'Stop';
-  
-  const forward = Array.from({length: 19}, (_, i) => i / 18);
-  const backward = [0.833, 0.666, 0.5, 0.333, 0.166, 0];
-  const steps = forward.concat(backward);
-  
-  let stepIdx = 0;
-  currentPreviewFrac = 0;
 
-  function runStep() {
+  const fwd = Array.from({length: 19}, (_, i) => i / 18);
+  const bwd = [0.833, 0.666, 0.5, 0.333, 0.166, 0];
+  let stepIdx = 0; currentPreviewFrac = 0;
+
+  function runForward() {
     if(!sweeping) return;
-    if(stepIdx >= steps.length) { sweepDone(); return; }
-    const target = steps[stepIdx++];
+    if(stepIdx >= fwd.length) { stepIdx = 0; runBackward(); return; }
     const s = parseFloat(document.getElementById('toolbar-demo-speed')?.value) || 1;
-    animateToFrac(target, 700/s, () => {
-      if(sweeping) sweepTimeout = setTimeout(runStep, 400/s);
+    animateToFrac(fwd[stepIdx++], 700/s, false, () => {
+      if(sweeping) sweepTimeout = setTimeout(runForward, 400/s);
     });
   }
-  runStep();
+  function runBackward() {
+    if(!sweeping) return;
+    if(stepIdx >= bwd.length) { sweepDone(); return; }
+    const s = parseFloat(document.getElementById('toolbar-demo-speed')?.value) || 1;
+    animateToFrac(bwd[stepIdx++], 800/s, true, () => {
+      if(sweeping) sweepTimeout = setTimeout(runBackward, 400/s);
+    });
+  }
+  runForward();
 }
 
-function animateToFrac(target, duration, onDone) {
+function animateToFrac(target, duration, isReturning, onDone) {
   const start = currentPreviewFrac;
   const startTime = performance.now();
   function frame(now) {
     if(!sweeping && !isCalibrating) return;
     const progress = Math.min((now - startTime) / duration, 1);
-    
-    // Smooth Quadratic Ease
     const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-    
     currentPreviewFrac = start + (target - start) * ease;
-    placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), currentPreviewFrac, cal);
+    updateAllClocks(currentPreviewFrac, isReturning);
     if(progress < 1) sweepRAF = requestAnimationFrame(frame);
     else if(onDone) onDone();
   }
@@ -240,24 +256,18 @@ function stopSweep() {
   sweepDone();
 }
 
-function sweepDone() {
-  sweeping = false;
-  const btn = document.getElementById('toolbar-demo-btn');
-  if(btn) btn.textContent = 'Demo';
-  tick();
-}
+function sweepDone() { sweeping = false; tick(); const b = document.getElementById('toolbar-demo-btn'); if(b) b.textContent = 'Demo'; }
 
 function showSetup() {
   isCalibrating = true; sweeping = false;
-  if(sweepRAF) cancelAnimationFrame(sweepRAF);
   document.getElementById('setup-overlay').style.display = 'flex';
   syncSlidersFromWip();
 }
 
 function syncSlidersFromWip() {
-  document.getElementById('sl-6am').value = wip.nudge6am || 0;
-  document.getElementById('sl-3pm').value = wip.nudge3pm || 0;
-  document.getElementById('sl-mid').value = wip.nudgeMid || 0;
+  document.getElementById('sl-6am').value = wip.nudge6am;
+  document.getElementById('sl-3pm').value = wip.nudge3pm;
+  document.getElementById('sl-mid').value = wip.nudgeMid;
   document.getElementById('sl-track').value = wip.trackYFrac * 100;
   document.getElementById('sl-ptrRatio').value = wip.ptrRatio;
   updateLabels();
@@ -276,29 +286,18 @@ function onAnchor(a, v) {
   if(a==='3pm') wip.nudge3pm = parseFloat(v);
   if(a==='mid') wip.nudgeMid = parseFloat(v);
   updateLabels();
-  let f = (a==='6am') ? 0 : (a==='mid' ? 1 : 0.5);
-  placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), f, wip);
+  placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), (a==='6am'?0:(a==='mid'?1:0.5)), wip);
 }
 
 function onSl(s, v) {
   if(s==='track') wip.trackYFrac = parseFloat(v)/100;
-  if(s==='ptrRatio') { wip.ptrRatio = parseFloat(v); PTR_H_RATIO = wip.ptrRatio; }
+  if(s==='ptrRatio') wip.ptrRatio = parseFloat(v);
   updateLabels();
   placePtr(document.getElementById('ptr-wrap'), document.getElementById('clock-stage'), 0.5, wip);
 }
 
-function finishSetup() {
-  cal = Object.assign({}, wip);
-  saveCal();
-  document.getElementById('setup-overlay').style.display = 'none';
-  isCalibrating = false; tick();
-}
-
-function resetSetup() {
-  localStorage.removeItem('lc_cal');
-  cal = Object.assign({}, DEFAULTS); wip = Object.assign({}, cal);
-  syncSlidersFromWip(); tick();
-}
+function finishSetup() { cal = Object.assign({}, wip); saveCal(); document.getElementById('setup-overlay').style.display = 'none'; isCalibrating = false; tick(); }
+function resetSetup() { localStorage.removeItem('lc_cal'); cal = Object.assign({}, DEFAULTS); wip = Object.assign({}, cal); syncSlidersFromWip(); tick(); }
 
 setInterval(tick, 1000); tick();
 window.onresize = tick;
