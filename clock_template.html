@@ -2,87 +2,83 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Industrial Linear Clockworks</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg:#0d0b08; --gold:#c8a96e; --gold2:#e8c98e; --text:#d4c5a9; --muted:#7a6a52;
     --clock-white: #fdfdfd; --clock-black: #1a1a1a; --clock-red: #cc0000;
-    --lume: #9dff9d;
-    --night-dim: 0.5;
+    --lume: #9dff9d; --night-dim: 0.5;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;user-select:none;}
+  body{
+    background:var(--bg); color:var(--text); font-family:'Crimson Pro',serif; 
+    overflow:hidden; height:100vh; display:flex; flex-direction:column; 
+    align-items:center; user-select:none; padding-bottom: env(safe-area-inset-bottom);
+  }
 
   #night-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: black; pointer-events: none; z-index: 50; 
-    opacity: 0; transition: opacity 0.4s;
+    background: black; pointer-events: none; z-index: 50; opacity: 0; transition: opacity 0.4s;
   }
   body.night-mode #night-overlay { opacity: var(--night-dim); }
 
-  #clock-view{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-grow:1;width:100%;padding:20px;position:relative;}
+  #clock-view{display:flex; flex-direction:column; align-items:center; justify-content:center; flex-grow:1; width:100%; padding:20px; position:relative;}
+  
+  #level-guide {
+    position: absolute; top: 32%; left: 0; width: 100%; height: 2px;
+    background: rgba(200, 169, 110, 0.7); box-shadow: 0 0 12px var(--gold);
+    z-index: 100; display: none; pointer-events: none;
+  }
+  body.show-guide #level-guide { display: block; }
+
   #clock-stage{position:relative; width:min(90vw, 960px); display:inline-block; overflow:visible;}
   #face-img{width:100%; display:block; filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7)); transition: filter 0.4s;}
   
-  body.night-mode #face-img { filter: brightness(calc(1 - var(--night-dim))); }
+  body.night-mode #face-img, body.night-mode #ptr-img, body.night-mode #time-strip { filter: brightness(calc(1 - var(--night-dim))); }
 
-  #ptr-wrap{position:absolute; pointer-events:none; will-change:left; z-index:60; display: flex; justify-content: center;}
-  #ptr-img{height:100%; width: auto; object-fit: contain; transition: filter 0.4s;}
-  body.night-mode #ptr-img { filter: brightness(calc(1 - var(--night-dim))); }
+  #ptr-wrap{position:absolute; pointer-events:none; will-change:left; z-index:65; width: 0; overflow: visible;}
+  #ptr-img{height:100%; width: auto; object-fit: contain; transition: filter 0.4s; transform: translateX(-50%);}
 
   #ptr-lume {
-    position: absolute; top: 22%; left: 51.5%; transform: translate(-50%, -50%);
+    position: absolute; top: 22%; left: 0; transform: translate(-50%, -50%);
     width: 10px; height: 10px; background: var(--lume); border-radius: 50%;
-    box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8);
-    opacity: 0; transition: opacity 0.5s; z-index: 61;
+    box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8); opacity: 0; transition: opacity 0.5s; z-index: 66;
   }
   body.night-mode #ptr-lume, body.calibrating-lume #ptr-lume { opacity: 1; }
 
+  #lume-row { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
   .lume-dot {
-    position: absolute; width: 10px; height: 10px;
-    background: var(--lume); border-radius: 50%;
-    box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8);
-    opacity: 0; transition: opacity 0.5s; z-index: 55;
-    transform: translateX(-50%);
+    position: absolute; width: 10px; height: 10px; background: var(--lume); border-radius: 50%;
+    box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8); opacity: 0; transition: opacity 0.5s; 
+    transform: translate(-50%, -50%);
   }
   body.night-mode .lume-dot, body.calibrating-lume .lume-dot { opacity: 1; }
 
-  #time-strip {margin-top:25px; display:flex; gap:20px; align-items:center; justify-content:center; min-height:180px; z-index:70; position:relative;}
-  
-  .clock-face-unit { display: none; width: 180px; height: 180px; border-radius: 50%; background: var(--clock-white); border: 4px solid #333; position: relative; overflow: visible; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-  .clock-face-unit.visible { display: block; }
+  #time-strip {margin-top:25px; display:flex; gap:20px; align-items:center; justify-content:center; min-height:180px; z-index:70; position:relative; transition: filter 0.4s;}
+  .clock-face-unit { display: none; width: 210px; height: 210px; border-radius: 50%; background: var(--clock-white); border: 5px solid #333; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+  .clock-face-unit.visible, #digital-clock.visible { display: flex; }
+  #digital-clock { display: none; background: #1a1a1a; color: #cc0000; font-family: monospace; min-width: 220px; height: 70px; align-items: center; justify-content: center; border-radius: 8px; border: 2px solid #333; font-size: 1.8rem; }
 
-  #digital-clock { 
-    display: none; background: #1a1a1a; color: #cc0000; font-family: monospace; 
-    font-weight: bold; min-width: 220px; height: 70px; align-items: center; 
-    justify-content: center; border-radius: 8px; border: 3px solid #333; 
-    font-size: 1.8rem; padding: 0 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  }
-  #digital-clock.visible { display: flex; }
-  
   #setup-overlay {
-    display:none; position: absolute; bottom: 12%; width:min(95vw, 600px); background:rgba(20,18,15,0.98);
+    display:none; position: absolute; bottom: 10%; width:min(95vw, 600px); background:rgba(20,18,15,0.98);
     border:1px solid var(--muted); padding:20px; flex-direction:column; align-items:center; border-radius:8px; z-index:1000;
   }
   .sl-row { display:grid; grid-template-columns:110px 1fr 50px; align-items:center; gap:10px; width:100%; margin-bottom:6px; }
-  .sl-row label { font-size:0.7rem; text-align:right; color:var(--muted); text-transform:uppercase; font-weight: bold;}
+  .sl-row label { font-size:0.65rem; color:var(--muted); text-transform:uppercase; font-weight: bold;}
   
-  #toolbar { position:fixed; bottom:12px; right:14px; display:flex; gap:12px; align-items:center; z-index:2000; pointer-events: auto; }
-  .tool-btn { background:none; border:none; color:var(--muted); cursor:pointer; opacity:0.6; transition:0.2s; font-size: 1rem; font-weight: 600;}
+  #toolbar { position:fixed; bottom: calc(15px + env(safe-area-inset-bottom)); right: 14px; display:flex; gap:12px; align-items:center; z-index:2000; }
+  .tool-btn { background:none; border:none; color:var(--muted); cursor:pointer; opacity:0.6; font-size: 1.1rem; font-weight: 600; padding: 8px;}
   .tool-btn.active, .tool-btn:hover { color: var(--gold); opacity: 1; }
-
-  #speed-wrap { display: flex; align-items: center; gap: 8px; }
-  #speed-wrap input { width: 80px; accent-color: var(--gold); cursor: pointer; }
-  #speed-wrap span { font-size: 0.8rem; font-family: monospace; min-width: 25px; color: var(--gold); }
-
-  body.is-calibrating #speed-wrap { display: none !important; }
+  #speed-wrap { display: flex; align-items: center; gap: 8px; font-family: monospace; color: var(--gold); font-size: 0.9rem; margin: 0 10px;}
+  #sl-demoSpeed { width: 70px; accent-color: var(--gold); }
 </style>
 </head>
-<body>
+<body onclick="requestWakeLock()">
 
 <div id="night-overlay"></div>
+<div id="level-guide"></div>
 
 <div id="clock-view">
   <div id="clock-stage">
@@ -90,257 +86,205 @@
     <div id="lume-row"></div>
     <div id="ptr-wrap"><img id="ptr-img" src="PTR_DATA_URI"><div id="ptr-lume"></div></div>
   </div>
-  
+
   <div id="time-strip">
     <div id="analog-clock" class="clock-face-unit">
-      <svg viewBox="0 0 100 100" style="overflow:visible;">
-        <circle cx="50" cy="50" r="48" fill="white" stroke="#333" stroke-width="1.5"/>
-        <g font-family="Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000" font-weight="900">
-            <text x="50" y="15">12</text>
-            <text x="68" y="20">1</text>
-            <text x="81" y="33">2</text>
-            <text x="86" y="54">3</text>
-            <text x="81" y="75">4</text>
-            <text x="68" y="89">5</text>
-            <text x="50" y="94">6</text>
-            <text x="32" y="89">7</text>
-            <text x="19" y="75">8</text>
-            <text x="14" y="54">9</text>
-            <text x="19" y="33">10</text>
-            <text x="32" y="20">11</text>
-        </g>
-        <circle cx="50" cy="50" r="2.5" fill="black"/>
-        <line id="hand-h" x1="50" y1="50" x2="50" y2="30" stroke="black" stroke-width="5" stroke-linecap="round" style="transform-origin:50px 50px;"/>
-        <line id="hand-m" x1="50" y1="50" x2="50" y2="15" stroke="black" stroke-width="3" stroke-linecap="round" style="transform-origin:50px 50px;"/>
-      </svg>
+        <svg viewBox="0 0 100 100" style="width:94%;height:94%;">
+            <circle cx="50" cy="50" r="48" fill="white"/>
+            <g font-size="14" text-anchor="middle" font-weight="900" font-family="Arial" fill="black">
+                <text x="50" y="15">12</text><text x="69" y="20">1</text><text x="83" y="34">2</text>
+                <text x="88" y="54">3</text><text x="83" y="75">4</text><text x="69" y="89">5</text>
+                <text x="50" y="94">6</text><text x="31" y="88">7</text><text x="17" y="75">8</text>
+                <text x="12" y="54">9</text><text x="17" y="34">10</text><text x="31" y="20">11</text>
+            </g>
+            <line id="hand-h" x1="50" y1="50" x2="50" y2="30" stroke="black" stroke-width="7" stroke-linecap="round" style="transform-origin:50% 50%;"/>
+            <line id="hand-m" x1="50" y1="50" x2="50" y2="16" stroke="black" stroke-width="5" stroke-linecap="round" style="transform-origin:50% 50%;"/>
+        </svg>
     </div>
-    <div id="digital-clock">06:00:00 AM</div>
+    <div id="digital-clock">06:00 AM</div>
   </div>
 
   <div id="setup-overlay">
-    <div id="sliders">
-      <div class="sl-row"><label>6 AM</label><input type="range" id="sl-nudge6am" min="-15" max="15" step="0.1" oninput="onAnchor('nudge6am', this.value)"><span id="val-nudge6am">0</span></div>
-      <div class="sl-row"><label>3 PM</label><input type="range" id="sl-nudge3pm" min="-15" max="15" step="0.1" oninput="onAnchor('nudge3pm', this.value)"><span id="val-nudge3pm">0</span></div>
-      <div class="sl-row"><label>Midnight</label><input type="range" id="sl-nudgeMid" min="-15" max="15" step="0.1" oninput="onAnchor('nudgeMid', this.value)"><span id="val-nudgeMid">0</span></div>
-      <div class="sl-row"><label>Pointer Y</label><input type="range" id="sl-trackYFrac" min="20" max="95" step="0.1" oninput="onSl('trackYFrac', this.value/100)"><span id="val-trackYFrac">0</span></div>
-      <div class="sl-row"><label>Ptr Size</label><input type="range" id="sl-ptrRatio" min="0.1" max="0.8" step="0.01" oninput="onSl('ptrRatio', this.value)"><span id="val-ptrRatio">0</span></div>
-      <div class="sl-row"><label>Lume Y</label><input type="range" id="sl-nudgeDotsY" min="10" max="95" step="0.1" oninput="onLumeSl(this.value/100)"><span id="val-nudgeDotsY">0</span></div>
-      <div class="sl-row"><label>Night Dim</label><input type="range" id="sl-nightDim" min="0" max="1" step="0.05" oninput="onDimSl(this.value)"><span id="val-nightDim">50%</span></div>
-      <div class="sl-row" id="cal-speed-row"><label>Demo Speed</label></div>
-    </div>
-    <button onclick="finishSetup()" style="margin-top:15px; background:var(--gold); padding:8px 25px; border:none; font-weight:bold; cursor:pointer; color: black; border-radius: 4px;">Save & Close</button>
+    <div class="sl-row"><label>Leveling</label><input type="range" id="sl-rotation" min="-10" max="10" step="0.01" oninput="onSl('rotation', this.value)" onmousedown="document.body.classList.add('show-guide')" onmouseup="document.body.classList.remove('show-guide')"><span id="val-rotation">0</span></div>
+    <div class="sl-row"><label>6 AM Start</label><input type="range" id="sl-nudge6am" min="-15" max="15" step="0.1" oninput="onAnchor('nudge6am', this.value)"><span id="val-nudge6am">0</span></div>
+    <div class="sl-row"><label>3 PM Middle</label><input type="range" id="sl-nudge3pm" min="-15" max="15" step="0.1" oninput="onAnchor('nudge3pm', this.value)"><span id="val-nudge3pm">0</span></div>
+    <div class="sl-row"><label>Midnight End</label><input type="range" id="sl-nudgeMid" min="-15" max="15" step="0.1" oninput="onAnchor('nudgeMid', this.value)"><span id="val-nudgeMid">0</span></div>
+    <div class="sl-row"><label>Lume Height</label><input type="range" id="sl-nudgeDotsY" min="10" max="95" step="0.1" oninput="onSl('nudgeDotsY', this.value/100)"><span id="val-nudgeDotsY">0</span></div>
+    <div class="sl-row"><label>Pointer Height</label><input type="range" id="sl-trackYFrac" min="20" max="95" step="0.1" oninput="onSl('trackYFrac', this.value/100)"><span id="val-trackYFrac">0</span></div>
+    <div class="sl-row"><label>Pointer Size</label><input type="range" id="sl-ptrRatio" min="0.1" max="0.8" step="0.01" oninput="onSl('ptrRatio', this.value)"><span id="val-ptrRatio">0</span></div>
+    <button id="done-btn" onclick="finishSetup()" style="margin-top:15px; background:var(--gold); padding:12px 35px; border:none; font-weight:bold; cursor:pointer; color: black; border-radius: 4px; width: 100%; font-size: 1.1rem;">SAVE & FINISH CALIBRATION</button>
   </div>
 </div>
 
 <div id="toolbar">
   <button class="tool-btn" id="btn-demo" onclick="toggleDemo()">Demo</button>
-  <div id="speed-wrap"></div>
-  <button class="tool-btn" id="btn-analog" onclick="toggleClock('analog')">🕒</button>
-  <button class="tool-btn" id="btn-digital" onclick="toggleClock('digital')">🔢</button>
+  <div id="speed-wrap">
+    <input type="range" id="sl-demoSpeed" min="0.1" max="5.0" step="0.1" oninput="onSpeedSl(this.value)">
+    <span id="val-demoSpeed">1x</span>
+  </div>
+  <button class="tool-btn" onclick="toggleClock('analog')">🕒</button>
+  <button class="tool-btn" onclick="toggleClock('digital')">🔢</button>
   <button class="tool-btn" onclick="showSetup()">⚙️</button>
 </div>
 
-<template id="speed-slider-tpl">
-    <input type="range" id="sl-demoSpeed" min="0.1" max="5.0" step="0.1" oninput="onSpeedSl(this.value)">
-    <span id="val-demoSpeed">1x</span>
-</template>
-
 <script>
-const PTR_TIP_Y = 0.9217, PTR_TIP_X = 0.5207;
-const DEFAULTS = { leftFrac:0.12, rightFrac:0.852, trackYFrac:0.554, nudge6am:0, nudge3pm:0, nudgeMid:0, ptrRatio:0.28, nudgeDotsY:0.45, nightDim:0.5, demoSpeed: 1.0 };
+let wakeLock = null, demoTimer = null;
+async function requestWakeLock() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} } }
+
+const DEFAULTS = { rotation: 0, leftFrac:0.12, rightFrac:0.852, trackYFrac:0.554, nudge6am:0, nudge3pm:0, nudgeMid:0, ptrRatio:0.28, nudgeDotsY:0.45, demoSpeed: 1.0, version: 1.5 };
 let cal = loadCal(), wip = Object.assign({}, cal);
 let sweeping = false, isCalibrating = false, currentPreviewFrac = 0;
-let sweepRAF = null;
+let sweepRAF = null, lastAnimTime = 0, animTarget = 0, animStart = 0, animDuration = 0, animCallback = null, isRetAnim = false;
 
-function loadCal() {
+function loadCal() { 
   try { 
     const saved = JSON.parse(localStorage.getItem('lc_cal'));
-    if(saved) document.documentElement.style.setProperty('--night-dim', saved.nightDim || 0.5);
-    return Object.assign({}, DEFAULTS, saved); 
-  } catch(e){ return DEFAULTS; }
+    if (saved && saved.version === DEFAULTS.version) return Object.assign({}, DEFAULTS, saved);
+    return DEFAULTS;
+  } catch(e){ return DEFAULTS; } 
 }
 
 function initLume() {
-  const stage = document.getElementById('clock-stage');
-  const existing = document.querySelectorAll('.lume-dot');
-  existing.forEach(e => e.remove());
+  const row = document.getElementById('lume-row'); row.innerHTML = '';
   for (let i = 0; i < 7; i++) {
-    const dot = document.createElement('div');
-    dot.className = 'lume-dot'; dot.id = `dot-${i}`;
-    stage.appendChild(dot);
+    const dot = document.createElement('div'); dot.className = 'lume-dot'; dot.id = `dot-${i}`; row.appendChild(dot);
   }
-}
-
-function placeSpeedSlider() {
-    const tpl = document.getElementById('speed-slider-tpl').content.cloneNode(true);
-    const calTarget = document.getElementById('cal-speed-row');
-    const pwaTarget = document.getElementById('speed-wrap');
-    const existing = document.getElementById('sl-demoSpeed');
-    if (existing) existing.remove();
-    document.getElementById('val-demoSpeed')?.remove();
-    if (isCalibrating) calTarget.appendChild(tpl); else pwaTarget.appendChild(tpl);
-    const s = document.getElementById('sl-demoSpeed');
-    if(s) {
-        s.value = wip.demoSpeed || 1.0;
-        document.getElementById('val-demoSpeed').textContent = s.value + 'x';
-    }
 }
 
 function timeToFrac(n) {
   const h = n.getHours(), m = n.getMinutes(), s = n.getSeconds();
   const totalSec = (h * 3600) + (m * 60) + s;
   const startSec = 6 * 3600;
-  if (totalSec < startSec) return 1 - (totalSec / startSec);
-  return (totalSec - startSec) / (18 * 3600);
+  if (totalSec < startSec) return 0;
+  return Math.max(0, Math.min((totalSec - startSec) / (18 * 3600), 1));
 }
 
 function getCorrectedX(f, c) {
-  const n6 = (c.nudge6am || 0)/100, n3 = (c.nudge3pm || 0)/100, nMid = (c.nudgeMid || 0)/100;
+  const n6 = (parseFloat(c.nudge6am)||0)/100, n3 = (parseFloat(c.nudge3pm)||0)/100, nMid = (parseFloat(c.nudgeMid)||0)/100;
   const left = c.leftFrac + n6, right = c.rightFrac + nMid;
   const m = 0.5 + (n3 / (right - left || 1));
   return (left + ((2-4*m)*f*f + (4*m-1)*f) * (right - left));
 }
 
 function updateAllClocks(frac, isReturning = false) {
-  const faceImg = document.getElementById('face-img');
-  const wrap = document.getElementById('ptr-wrap');
   const activeCal = isCalibrating ? wip : cal;
-
-  if (isReturning) document.body.classList.add('night-mode');
-  else if (!isCalibrating) document.body.classList.remove('night-mode');
-
-  const imgW = faceImg.clientWidth, imgH = faceImg.clientHeight;
-  const imgL = faceImg.offsetLeft, imgT = faceImg.offsetTop;
+  const face = document.getElementById('face-img'), wrap = document.getElementById('ptr-wrap');
+  const imgW = face.clientWidth, imgH = face.clientHeight;
   if (!imgW) return;
 
-  const dotsY = activeCal.nudgeDotsY * imgH;
-  const hourFracs = [0, 0.166, 0.333, 0.5, 0.666, 0.833, 1.0];
+  const isNight = isReturning || (timeToFrac(new Date()) === 0 && !isCalibrating);
+  document.body.classList.toggle('night-mode', isNight);
+  face.style.transform = `rotate(${activeCal.rotation || 0}deg)`;
+
   for (let i = 0; i < 7; i++) {
     const dot = document.getElementById(`dot-${i}`);
     if (dot) {
-      const dotX = getCorrectedX(hourFracs[i], activeCal) * imgW;
-      dot.style.top = (imgT + dotsY) + "px";
-      dot.style.left = (imgL + dotX) + "px";
+      dot.style.top = (imgH * activeCal.nudgeDotsY) + "px";
+      dot.style.left = (getCorrectedX(i/6, activeCal) * imgW) + "px";
     }
   }
 
   const pH = imgH * activeCal.ptrRatio;
   wrap.style.height = pH + "px";
-  wrap.style.top = (imgT + activeCal.trackYFrac * imgH - pH * PTR_TIP_Y) + "px";
-  const tipX = getCorrectedX(frac, activeCal) * imgW;
-  wrap.style.left = (imgL + tipX - (wrap.clientWidth || pH*0.5) * PTR_TIP_X) + "px";
+  wrap.style.top = (imgH * activeCal.trackYFrac - pH * 0.92) + "px";
+  wrap.style.left = (getCorrectedX(frac, activeCal) * imgW) + "px";
 
-  let totalMins = isReturning ? (18*60) + (1-frac)*(6*60) : frac*(18*60);
-  const vH24 = (6 + Math.floor(totalMins/60)) % 24, vM = Math.floor(totalMins%60);
-  document.getElementById('digital-clock').textContent = `${vH24 % 12 || 12}:${String(vM).padStart(2,'0')} ${vH24 >= 12 ? 'PM' : 'AM'}`;
+  let totalMins = frac * (18 * 60);
+  let vH24 = 6 + Math.floor(totalMins / 60);
+  let vM = Math.floor(totalMins % 60);
+  document.getElementById('digital-clock').textContent = `${vH24 % 12 || 12}:${String(vM).padStart(2,'0')} ${vH24 >= 12 && vH24 < 24 ? 'PM' : 'AM'}`;
   document.getElementById('hand-h').style.transform = `rotate(${vH24*30 + vM*0.5}deg)`;
   document.getElementById('hand-m').style.transform = `rotate(${vM*6}deg)`;
 }
 
-function toggleDemo() { if (sweeping) stopSweep(); else startSweep(); }
+function toggleDemo() { sweeping ? stopSweep() : startSweep(); }
 
 function startSweep() {
-  sweeping = true;
-  document.getElementById('btn-demo').textContent = "Stop";
-  glideTo(0, 1500 / cal.demoSpeed, false, () => {
-    const steps = [...Array(19).keys()].map(i => i/18).concat([0.83, 0.66, 0.5, 0.33, 0.16, 0]);
-    let i = 0;
-    function next() {
-      if (!sweeping) return;
-      const curSpeed = cal.demoSpeed;
-      if (i >= steps.length) { stopSweep(); return; }
-      animateToFrac(steps[i++], 700 / curSpeed, (i > 19), () => setTimeout(next, 400 / curSpeed));
+  stopSweep();
+  sweeping = true; document.getElementById('btn-demo').textContent = "Stop";
+  const steps = [...Array(19).keys()].map(i => i/18);
+  // Derive return fractions mathematically from 0-1 scale to ensure alignment
+  const returnSteps = [5/6, 4/6, 3/6, 2/6, 1/6, 0]; 
+  let i = 0, isNight = false;
+
+  const next = () => {
+    if (!sweeping) return;
+    const speed = cal.demoSpeed || 1;
+    if (!isNight) {
+      if (i >= steps.length) { isNight = true; i = 0; demoTimer = setTimeout(next, 400/speed); return; }
+      animateToFrac(steps[i++], 800/speed, false, () => { demoTimer = setTimeout(next, 400/speed); });
+    } else {
+      if (i >= returnSteps.length) { stopSweep(); return; }
+      animateToFrac(returnSteps[i++], 800/speed, true, () => { demoTimer = setTimeout(next, 400/speed); });
     }
-    next();
-  });
+  };
+  animateToFrac(0, 1000, false, next);
 }
 
 function stopSweep() {
   sweeping = false;
   document.getElementById('btn-demo').textContent = "Demo";
   if (sweepRAF) cancelAnimationFrame(sweepRAF);
-  const now = new Date();
-  glideTo(timeToFrac(now), 1500, now.getHours() < 6);
-}
-
-function glideTo(target, duration, isRet, onDone) {
-  const start = currentPreviewFrac, startTime = performance.now();
-  function frame(t) {
-    const p = Math.min((t - startTime) / duration, 1);
-    const ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p;
-    currentPreviewFrac = start + (target - start) * ease;
-    updateAllClocks(currentPreviewFrac, isRet);
-    if (p < 1) requestAnimationFrame(frame); else if(onDone) onDone();
-  }
-  requestAnimationFrame(frame);
+  if (demoTimer) clearTimeout(demoTimer);
+  animCallback = null;
+  animateToFrac(timeToFrac(new Date()), 1500, false, null);
 }
 
 function animateToFrac(target, duration, isRet, onDone) {
-  const start = currentPreviewFrac, startTime = performance.now();
-  function frame(t) {
-    if(!sweeping && onDone !== null && !isCalibrating) return;
-    const p = Math.min((t - startTime) / duration, 1);
-    const ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p;
-    currentPreviewFrac = start + (target - start) * ease;
-    updateAllClocks(currentPreviewFrac, isRet);
-    if (p < 1) sweepRAF = requestAnimationFrame(frame); else if(onDone) onDone();
-  }
-  sweepRAF = requestAnimationFrame(frame);
+  animStart = currentPreviewFrac; animTarget = target; animDuration = Math.max(duration, 1);
+  animProgress = 0; lastAnimTime = performance.now(); animCallback = onDone; isRetAnim = isRet;
+  if (!sweepRAF) sweepRAF = requestAnimationFrame(animFrame);
 }
 
-function showSetup() { isCalibrating = true; sweeping = false; document.body.classList.add('is-calibrating'); document.getElementById('setup-overlay').style.display = 'flex'; placeSpeedSlider(); syncSliders(); }
-
-function syncSliders() {
-  ['nudge6am', 'nudge3pm', 'nudgeMid', 'trackYFrac', 'ptrRatio', 'nudgeDotsY', 'nightDim'].forEach(key => {
-    const el = document.getElementById('sl-' + key);
-    if(el) {
-        let val = wip[key];
-        if(['trackYFrac', 'ptrRatio', 'nudgeDotsY', 'nightDim'].includes(key)) val = (val*100).toFixed(0);
-        el.value = (['nudge6am','nudge3pm','nudgeMid'].includes(key)) ? wip[key] : val;
-        document.getElementById('val-' + key).textContent = val + (['nudge6am', 'nudge3pm', 'nudgeMid'].includes(key) ? '' : '%');
-    }
-  });
-}
-
-function onAnchor(k, v) { wip[k] = parseFloat(v); document.getElementById('val-'+k).textContent = v; updateAllClocks(k==='nudge6am'?0:(k==='nudge3pm'?0.5:1), false); }
-function onSl(k, v) { wip[k] = parseFloat(v); document.getElementById('val-'+k).textContent = Math.round(v*100)+'%'; updateAllClocks(0.5, false); }
-function onLumeSl(v) { wip.nudgeDotsY = parseFloat(v); document.getElementById('val-nudgeDotsY').textContent = Math.round(v*100)+'%'; document.body.classList.add('calibrating-lume'); updateAllClocks(0.5, false); clearTimeout(window.lTimer); window.lTimer = setTimeout(()=>document.body.classList.remove('calibrating-lume'), 2000); }
-function onDimSl(v) { wip.nightDim = parseFloat(v); document.getElementById('val-nightDim').textContent = Math.round(v*100)+'%'; document.documentElement.style.setProperty('--night-dim', v); document.body.classList.add('preview-dim'); clearTimeout(window.dimTimer); window.dimTimer = setTimeout(()=>document.body.classList.remove('preview-dim'), 1500); }
-function onSpeedSl(v) { wip.demoSpeed = parseFloat(v); cal.demoSpeed = parseFloat(v); document.getElementById('val-demoSpeed').textContent = v + 'x'; }
-
-function toggleClock(type) {
-  const el = document.getElementById(type + '-clock');
-  const btn = document.getElementById('btn-' + type);
-  if (el.classList.contains('visible')) {
-    el.classList.remove('visible');
-    btn.classList.remove('active');
-  } else {
-    el.classList.add('visible');
-    btn.classList.add('active');
+function animFrame(t) {
+  const dt = t - lastAnimTime; lastAnimTime = t;
+  animProgress = Math.min(animProgress + dt / animDuration, 1);
+  const ease = animProgress < 0.5 ? 2*animProgress*animProgress : -1+(4-2*animProgress)*animProgress;
+  currentPreviewFrac = animStart + (animTarget - animStart) * ease;
+  updateAllClocks(currentPreviewFrac, isRetAnim);
+  if (animProgress < 1) sweepRAF = requestAnimationFrame(animFrame);
+  else { 
+    sweepRAF = null; 
+    let cb = animCallback; animCallback = null;
+    if (cb) cb(); 
   }
 }
 
-function finishSetup() { cal = Object.assign({}, wip); localStorage.setItem('lc_cal', JSON.stringify(cal)); document.getElementById('setup-overlay').style.display = 'none'; document.body.classList.remove('is-calibrating'); isCalibrating = false; placeSpeedSlider(); tick(); }
+function showSetup() { isCalibrating = true; sweeping = false; document.body.classList.add('is-calibrating', 'calibrating-lume'); document.getElementById('setup-overlay').style.display = 'flex'; syncSliders(); }
+function syncSliders() { ['rotation', 'nudge6am', 'nudge3pm', 'nudgeMid', 'trackYFrac', 'ptrRatio', 'nudgeDotsY'].forEach(k => { const el = document.getElementById('sl-'+k); if(el) { el.value = wip[k]; document.getElementById('val-'+k).textContent = ['trackYFrac','ptrRatio','nudgeDotsY'].includes(k) ? Math.round(wip[k]*100)+'%' : wip[k]; } }); }
+function onSl(k, v) { wip[k] = parseFloat(v); document.getElementById('val-'+k).textContent = ['trackYFrac','ptrRatio','nudgeDotsY'].includes(k) ? Math.round(v*100)+'%' : v; updateAllClocks(0.5); }
+function onAnchor(k, v) { wip[k] = parseFloat(v); document.getElementById('val-'+k).textContent = v; if(k==='nudge6am') updateAllClocks(0); else if(k==='nudge3pm') updateAllClocks(0.5); else updateAllClocks(1); }
+function onSpeedSl(v) { cal.demoSpeed = parseFloat(v); document.getElementById('val-demoSpeed').textContent = v+'x'; }
+function toggleClock(t) { document.getElementById(t+'-clock').classList.toggle('visible'); }
+
+async function finishSetup() { 
+    const btn = document.getElementById('done-btn');
+    btn.textContent = "SENDING DATA...";
+    btn.disabled = true;
+    cal = Object.assign({}, wip);
+    localStorage.setItem('lc_cal', JSON.stringify(cal));
+    const payload = JSON.stringify(cal);
+    try {
+        const response = await fetch("/done", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: payload
+        });
+        if (response.ok) { 
+          btn.textContent = "SUCCESS!";
+          setTimeout(() => window.close(), 500); 
+        }
+    } catch (e) { alert("Terminal not responding. Is the script running?"); btn.disabled = false; btn.textContent = "SAVE & FINISH CALIBRATION"; }
+}
 
 window.onload = () => { 
-    initLume(); 
-    placeSpeedSlider(); 
-    
-    // Check if in PWA mode (not calibrating) to start with clocks hidden
-    const urlParams = new URLSearchParams(window.location.search);
-    const isPWA = !urlParams.has('calibrate') && window.location.pathname.includes('_calibrate.html') === false;
-    
-    // If not explicitly calibrating, ensure clocks are hidden initially
-    if (!isPWA) {
-       // Start with analog hidden as per user request for PWA mode
-       document.getElementById('analog-clock').classList.remove('visible');
-       document.getElementById('btn-analog').classList.remove('active');
-    }
-
-    tick(); 
-    setInterval(() => { if(!sweeping && !isCalibrating) tick(); }, 1000); 
+  initLume(); 
+  document.getElementById('sl-demoSpeed').value = cal.demoSpeed;
+  document.getElementById('val-demoSpeed').textContent = cal.demoSpeed + 'x';
+  tick(); 
+  setInterval(() => { if(!sweeping && !isCalibrating) tick(); }, 1000); 
 };
-function tick() { const now = new Date(); currentPreviewFrac = timeToFrac(now); updateAllClocks(currentPreviewFrac, now.getHours() < 6); }
+function tick() { currentPreviewFrac = timeToFrac(new Date()); updateAllClocks(currentPreviewFrac); }
 </script>
 </body>
 </html>

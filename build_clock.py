@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import argparse, base64, io, os, sys, json, re, threading, webbrowser, time
 
 print("--- Initializing Industrial Clockworks Build System ---")
@@ -18,10 +18,7 @@ SHOPIFY_SHOP    = os.environ.get('SHOPIFY_SHOP_NAME', 'linear-clockworks.myshopi
 SHOPIFY_TOKEN   = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
 SHOPIFY_API_VER = '2024-01'
 
-
-# Fixed Syntax for Teaching Clock Defaults
-# Updated DEFAULTS with nudgeDotsY
-DEFAULTS = dict(leftFrac=0.12, rightFrac=0.852, trackYFrac=0.554, nudge6am=0, nudge3pm=0, nudgeMid=0, sweepSpeed=1.0, ptrRatio=0.28, nudgeDotsY=0.45)
+DEFAULTS = dict(leftFrac=0.12, rightFrac=0.852, trackYFrac=0.554, nudge6am=0, nudge3pm=0, nudgeMid=0, sweepSpeed=1.0, ptrRatio=0.28, nudgeDotsY=0.45, nightDim=0.5)
 TEMPLATE = os.path.join(os.path.dirname(__file__), 'clock_template.html')
 REQ_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
 
@@ -41,17 +38,24 @@ def shopify_graphql(query, variables=None):
 def find_product_by_sku(sku, cached_id=None):
     if cached_id:
         print(f"  [API] Fast-tracking lookup via cached ID: {cached_id}...")
-        query = """query($id: ID!) { product(id: $id) { title handle images(first: 20) { edges { node { url } } } } }"""
+        query = """query($id: ID!) { product(id: $id) { id title handle images(first: 20) { edges { node { url } } } } }"""
         data = shopify_graphql(query, {'id': cached_id})
         p = data.get('product')
         if p: return p
+        print("  [API] Cached ID no longer valid, falling back to SKU search...")
+
     print(f"  [API] Querying SKU: {sku}...")
-    query = """query($q: String!) { productVariants(first: 1, query: $q) { edges { node { sku product { title handle images(first: 20) { edges { node { url } } } } } } } }"""
+    query = """query($q: String!) { productVariants(first: 1, query: $q) { edges { node { sku product { id title handle images(first: 20) { edges { node { url } } } } } } } }"""
     data = shopify_graphql(query, {'q': f'sku:{sku}'})
     edges = data.get('productVariants', {}).get('edges', [])
     if not edges: return None
     p = edges[0]['node']['product']
-    return {'title': p['title'], 'handle': p.get('handle'), 'images': [e['node']['url'] for e in p['images']['edges']]}
+    return {
+        'id': p['id'], 
+        'title': p['title'], 
+        'handle': p.get('handle'), 
+        'images': [e['node']['url'] for e in p['images']['edges']]
+    }
 
 def get_friendly_name(title):
     name = re.split(r'[:|,]', title)[0].strip()
@@ -68,18 +72,8 @@ def straightening_process(img):
     return img.rotate(np.median(angles), resample=Image.BICUBIC, expand=True)
 
 def strip_calibration(html, product_url="#"):
-    # Surgical CSS hide for gear and overlay
-    hide_css = """<style>#cal-bar, .tool-btn[onclick*='showSetup'], #setup-overlay { display: none !important; }
-    .demo-group { display: flex; align-items: center; gap: 8px; margin-left: 10px; border-left: 1px solid var(--muted); padding-left: 10px; }
-    #toolbar-demo-speed { width: 60px; accent-color: var(--gold); cursor: pointer; }</style>"""
+    hide_css = """<style>#cal-bar, .tool-btn[onclick*='showSetup'], #setup-overlay { display: none !important; }</style>"""
     html = html.replace('</head>', hide_css + '</head>')
-    
-    # Updated: Added step="0.25" and min="0.25"
-    demo_ui = f"""<div class="demo-group"><button class="tool-btn" id="toolbar-demo-btn" onclick="startSweep()" style="font-family:'Playfair Display'; font-size:0.85rem; color:var(--gold);">Demo</button>
-    <input type="range" id="toolbar-demo-speed" min="0.25" max="5" step="0.25" value="1" title="Speed">
-    <a href="{product_url}" target="_blank" class="tool-btn" style="text-decoration:none; color:var(--muted); font-size:0.85rem; margin-left:8px;">Details</a></div>"""
-    
-    html = html.replace('</div>\n\n<script>', demo_ui + '\n</div>\n\n<script>')
     return html
 
 def main():
@@ -89,13 +83,22 @@ def main():
     args = ap.parse_args()
     
     sku = args.sku.upper()
-    product = find_product_by_sku(sku)
+    cal_json = f'{sku}-cal.json'
+    
+    # Attempt to retrieve cached Shopify ID from existing calibration file
+    cached_id = None
+    if os.path.exists(cal_json):
+        try:
+            with open(cal_json, 'r') as j:
+                cached_id = json.load(j).get('shopify_id')
+        except: pass
+
+    product = find_product_by_sku(sku, cached_id=cached_id)
     if not product: sys.exit(f"SKU {sku} not found")
     
     fname = get_friendly_name(product['title'])
-    cal_json = f'{sku}-cal.json'
-
     f_cache, p_cache = f'{sku}_face.png', f'{sku}_ptr.png'
+
     if not os.path.exists(f_cache):
         img_data = _requests.get(product['images'][5], headers=REQ_HEADERS).content
         img = Image.open(io.BytesIO(img_data)).convert('RGB')
@@ -114,7 +117,6 @@ def main():
     if os.path.exists(cal_json):
         with open(cal_json, 'r') as j: cal.update(json.load(j))
 
-    html = re.sub(r'let PTR_H_RATIO = [\d.]+;', f'let PTR_H_RATIO = {cal.get("ptrRatio", 0.28):.4f};', html)
     html = re.sub(r'const DEFAULTS = \{[^}]+\};', f"const DEFAULTS = {json.dumps(cal)};", html)
 
     if args.calibrate:
@@ -131,29 +133,39 @@ def main():
                 cal_result.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
                 self.send_response(200); self.end_headers()
             def log_message(self, *a): pass
-        class ThreadedHTTPServer(HTTPServer): allow_reuse_address = True
-        server = ThreadedHTTPServer(('localhost', 19888), H)
+        
+        server = HTTPServer(('localhost', 19888), H)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         webbrowser.open('http://localhost:19888')
         while not cal_result: time.sleep(0.5)
-        with open(cal_json, 'w') as j: json.dump(cal_result[0], j, indent=2)
+        
+        # Merge calibration result with the Shopify ID for future fast lookups
+        save_data = cal_result[0]
+        save_data['shopify_id'] = product['id']
+        with open(cal_json, 'w') as j: json.dump(save_data, j, indent=2)
+        
         server.shutdown(); server.server_close()
         os.system(f"python3 {sys.argv[0]} {args.sku}") 
     else:
         html = strip_calibration(html, f"https://{SHOPIFY_SHOP}/products/{product['handle']}")
         cv = int(time.time())
         sw_name, mn_name = f"{fname}-sw.js", f"{fname}.webmanifest"
+        
         pwa_head = f'<link rel="manifest" href="./{mn_name}"><meta name="theme-color" content="#0d0b08"><link rel="apple-touch-icon" href="data:image/png;base64,{f_b64}"><script>if(\'serviceWorker\' in navigator){{window.addEventListener(\'load\',()=>{{navigator.serviceWorker.register(\'./{sw_name}\');}});}}</script>'
         html = html.replace('</head>', pwa_head + '</head>')
+        
         sw_content = f"const CACHE=\'lc-{fname}-{cv}\';self.addEventListener(\'install\',e=>{{e.waitUntil(caches.open(CACHE).then(c=>c.add(new Request(\'./{fname}.html\',{{cache:\'reload\'}}))));self.skipWaiting();}});self.addEventListener(\'activate\',e=>{{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(\'lc-{fname}-\')&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();}});self.addEventListener(\'fetch\',e=>{{if(e.request.url.endsWith(\'.html\')||e.request.url.endsWith(\'/\')){{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));}}}});"
         manifest = {"name":f"Linear Clock {fname}","short_name":fname,"start_url":f"./{fname}.html","display":"standalone","background_color":"#0d0b08","theme_color":"#c8a96e","icons":[{"src":f"data:image/png;base64,{f_b64}","sizes":"512x512","type":"image/png"}]}
+        
         with open(f"{fname}.html", 'w') as f: f.write(html)
         with open(sw_name, 'w') as f: f.write(sw_content)
         with open(mn_name, 'w') as f: json.dump(manifest, f, indent=2)
         
         # TERMINAL OUTPUT
+        pwa_url = f"https://linearclockworks.github.io/virtualclock/{fname}.html"
         print(f"\n[Success] PWA Build Complete: {fname}")
         print("-" * 45)
+        print(f"URL: {pwa_url}")
         print(f"git add {fname}.html {sw_name} {mn_name}")
         print(f"git commit -m \"{fname} teaching clock build\"")
         print(f"git push")
