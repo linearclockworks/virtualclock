@@ -17,7 +17,6 @@
     background:var(--bg); color:var(--text); font-family:'Crimson Pro',serif; 
     overflow:hidden; height:100vh; display:flex; flex-direction:column; 
     align-items:center; user-select:none;
-    /* Respect iPhone Safe Areas */
     padding-bottom: env(safe-area-inset-bottom);
   }
 
@@ -29,9 +28,15 @@
   body.night-mode #night-overlay { opacity: var(--night-dim); }
 
   #clock-view{display:flex; flex-direction:column; align-items:center; justify-content:center; flex-grow:1; width:100%; padding:20px; position:relative;}
-  #clock-stage{position:relative; width:min(90vw, 960px); display:inline-block; overflow:visible;}
-  #face-img{width:100%; display:block; filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7)); transition: filter 0.4s;}
   
+  /* Responsive Stage */
+  #clock-stage{position:relative; width:min(90vw, 960px); display:inline-block; overflow:visible;}
+  @media (orientation: landscape) and (max-height: 500px) {
+    #clock-stage { width: min(80vw, 700px); }
+    #clock-view { padding: 10px; }
+  }
+
+  #face-img{width:100%; display:block; filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7)); transition: filter 0.4s;}
   body.night-mode #face-img { filter: brightness(calc(1 - var(--night-dim))); }
 
   #ptr-wrap{position:absolute; pointer-events:none; will-change:left; z-index:60; display: flex; justify-content: center;}
@@ -55,8 +60,16 @@
   }
   body.night-mode .lume-dot, body.calibrating-lume .lume-dot { opacity: 1; }
 
+  /* Time Strip Layout */
   #time-strip {margin-top:25px; display:flex; gap:20px; align-items:center; justify-content:center; min-height:180px; z-index:70; position:relative;}
   
+  /* Landscape shrink for clocks */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #time-strip { margin-top: 10px; min-height: 110px; }
+    .clock-face-unit { width: 110px !important; height: 110px !important; }
+    #digital-clock { height: 50px !important; min-width: 160px !important; font-size: 1.3rem !important; }
+  }
+
   .clock-face-unit { display: none; width: 180px; height: 180px; border-radius: 50%; background: var(--clock-white); border: 4px solid #333; position: relative; overflow: visible; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
   .clock-face-unit.visible { display: block; }
 
@@ -73,7 +86,6 @@
     border:1px solid var(--muted); padding:20px; flex-direction:column; align-items:center; border-radius:8px; z-index:1000;
   }
 
-  /* Fixed for iPhone safe areas */
   #dimmer-popup {
     display: none; position: absolute; 
     bottom: calc(75px + env(safe-area-inset-bottom)); 
@@ -88,7 +100,6 @@
   .sl-row { display:grid; grid-template-columns:110px 1fr 50px; align-items:center; gap:10px; width:100%; margin-bottom:6px; }
   .sl-row label { font-size:0.7rem; text-align:right; color:var(--muted); text-transform:uppercase; font-weight: bold;}
   
-  /* Fixed toolbar for iPhone Safe Area */
   #toolbar { 
     position:fixed; 
     bottom: calc(15px + env(safe-area-inset-bottom)); 
