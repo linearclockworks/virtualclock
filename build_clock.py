@@ -18,8 +18,10 @@ SHOPIFY_SHOP    = os.environ.get('SHOPIFY_SHOP_NAME', 'linear-clockworks.myshopi
 SHOPIFY_TOKEN   = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
 SHOPIFY_API_VER = '2024-01'
 
+
 # Fixed Syntax for Teaching Clock Defaults
-DEFAULTS = dict(leftFrac=0.12, rightFrac=0.852, trackYFrac=0.554, nudge6am=0, nudge3pm=0, nudgeMid=0, sweepSpeed=1.0, ptrRatio=0.28)
+# Updated DEFAULTS with nudgeDotsY
+DEFAULTS = dict(leftFrac=0.12, rightFrac=0.852, trackYFrac=0.554, nudge6am=0, nudge3pm=0, nudgeMid=0, sweepSpeed=1.0, ptrRatio=0.28, nudgeDotsY=0.45)
 TEMPLATE = os.path.join(os.path.dirname(__file__), 'clock_template.html')
 REQ_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
 
@@ -36,7 +38,13 @@ def shopify_graphql(query, variables=None):
     except Exception as e:
         sys.exit(f"  [Error] Shopify Connection Failed: {e}")
 
-def find_product_by_sku(sku):
+def find_product_by_sku(sku, cached_id=None):
+    if cached_id:
+        print(f"  [API] Fast-tracking lookup via cached ID: {cached_id}...")
+        query = """query($id: ID!) { product(id: $id) { title handle images(first: 20) { edges { node { url } } } } }"""
+        data = shopify_graphql(query, {'id': cached_id})
+        p = data.get('product')
+        if p: return p
     print(f"  [API] Querying SKU: {sku}...")
     query = """query($q: String!) { productVariants(first: 1, query: $q) { edges { node { sku product { title handle images(first: 20) { edges { node { url } } } } } } } }"""
     data = shopify_graphql(query, {'q': f'sku:{sku}'})
@@ -73,7 +81,7 @@ def strip_calibration(html, product_url="#"):
     
     html = html.replace('</div>\n\n<script>', demo_ui + '\n</div>\n\n<script>')
     return html
-    
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('sku')
