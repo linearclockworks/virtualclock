@@ -32,11 +32,13 @@
   body.night-mode #face-img, body.night-mode #ptr-img { filter: brightness(calc(1 - var(--night-dim))); }
   body.night-mode #time-strip { filter: brightness(calc((1 - var(--night-dim)) * 0.25)); }
 
+  /* Pointer Wrapper: Centers assembly on X. translateY(-100%) puts the TIP on the line */
   #ptr-wrap { 
     position: absolute; pointer-events: none; will-change: left; z-index: 65; 
     width: 0; display: flex; flex-direction: column; align-items: center; 
+    transform: translateY(-100%); 
   }
-  #ptr-img { height: auto; width: auto; transform: translateY(-50%); }
+  #ptr-img { height: auto; width: auto; }
 
   #ptr-lume {
     position: absolute; left: 0; transform: translate(-50%, -50%);
@@ -119,7 +121,7 @@
     <div class="sl-row"><label>6 AM Start</label><input type="range" id="sl-nudge6am" min="0" max="100" step="0.1" oninput="onAnchor('nudge6am', this.value)"><span id="val-nudge6am">0</span></div>
     <div class="sl-row"><label>3 PM Middle</label><input type="range" id="sl-nudge3pm" min="0" max="100" step="0.1" oninput="onAnchor('nudge3pm', this.value)"><span id="val-nudge3pm">0</span></div>
     <div class="sl-row"><label>Midnight End</label><input type="range" id="sl-nudgeMid" min="0" max="100" step="0.1" oninput="onAnchor('nudgeMid', this.value)"><span id="val-nudgeMid">0</span></div>
-    <div class="sl-row"><label>Pointer Align</label><input type="range" id="sl-ptrNudgeX" min="-20" max="20" step="0.01" oninput="onSl('ptrNudgeX', this.value)"><span id="val-ptrNudgeX">0</span></div>
+    <div class="sl-row"><label>Pointer Align</label><input type="range" id="sl-ptrNudgeX" min="-15" max="15" step="0.01" oninput="onSl('ptrNudgeX', this.value)"><span id="val-ptrNudgeX">0</span></div>
     <div class="sl-row"><label>Lume Height</label><input type="range" id="sl-nudgeDotsY" min="5" max="95" step="0.1" oninput="onSl('nudgeDotsY', this.value/100)"><span id="val-nudgeDotsY">0</span></div>
     <div class="sl-row"><label>Pointer Height</label><input type="range" id="sl-trackYFrac" min="5" max="95" step="0.1" oninput="onSl('trackYFrac', this.value/100)"><span id="val-trackYFrac">0</span></div>
     <div class="sl-row"><label>Ptr Lume Vert</label><input type="range" id="sl-nudgePtrLumeY" min="5" max="95" step="0.1" oninput="onSl('nudgePtrLumeY', this.value/100)"><span id="val-nudgePtrLumeY">0</span></div>
@@ -131,11 +133,7 @@
   <div class="tool-group">
     <a href="https://linearclockworks.com/products/rufino-bolivian-rosewood-surface-river" class="tool-btn" target="_blank">Details</a>
     <button class="tool-btn" id="btn-demo" onclick="toggleDemo()">Demo</button>
-    <div class="slider-wrap">
-      <span>Spd</span>
-      <input type="range" id="sl-demoSpeed" min="0" max="5.0" step="0.1" oninput="onSpeedSl(this.value)">
-      <span id="val-demoSpeed">1x</span>
-    </div>
+    <div class="slider-wrap"><span>Spd</span><input type="range" id="sl-demoSpeed" min="0" max="5.0" step="0.1" oninput="onSpeedSl(this.value)"><span id="val-demoSpeed">1x</span></div>
   </div>
   <div class="tool-group">
     <div class="slider-wrap"><span>🌙 Dim</span><input type="range" id="sl-mainNightDim" min="0" max="0.9" step="0.01" onmousedown="forceNightPreview(true)" onmouseup="forceNightPreview(false)" oninput="onSl('nightDim', this.value)"></div>
@@ -153,7 +151,7 @@ const DEFAULTS = {
   rotation: 0.14, trackYFrac: 0.38, 
   nudge6am: 7.5, nudge3pm: 48.0, nudgeMid: 88.5, 
   ptrRatio: 0.47, nudgeDotsY: 0.31, nudgePtrLumeY: 0.20, ptrNudgeX: 0,
-  demoSpeed: 2.3, nightDim: 0.46, version: 3.4 
+  demoSpeed: 2.3, nightDim: 0.46, version: 3.5 
 };
 
 let cal = loadCal(), wip = Object.assign({}, cal);
@@ -210,7 +208,7 @@ function updateAllClocks(frac, isReturning = false) {
     }
   }
 
-  // Pointer position logic: base path + independent alignment nudge
+  // Pointer position: Base path + independent alignment nudge
   const basePathX = getCorrectedX(frac, activeCal) * imgW;
   const indyNudge = (parseFloat(activeCal.ptrNudgeX) || 0) * imgW / 100;
   wrap.style.left = (basePathX + indyNudge) + "px";
@@ -219,7 +217,7 @@ function updateAllClocks(frac, isReturning = false) {
   const pH = imgH * activeCal.ptrRatio;
   ptrImg.style.height = pH + "px";
   
-  // Lume follows Assembly height (tracks ptr image tip)
+  // Lume follows Assembly height (absolute relative to top)
   ptrLume.style.top = (imgH * activeCal.nudgePtrLumeY - (imgH * activeCal.trackYFrac)) + "px";
 
   let totalMins = frac * (18 * 60), vH24 = 6 + Math.floor(totalMins / 60), vM = Math.floor(totalMins % 60);
@@ -228,7 +226,11 @@ function updateAllClocks(frac, isReturning = false) {
   document.getElementById('hand-m').style.transform = `rotate(${vM*6}deg)`;
 }
 
-function forceNightPreview(on) { isForceNight = on; updateAllClocks(currentPreviewFrac); }
+function forceNightPreview(on) { 
+  isForceNight = on; 
+  if (!on) { previewLockFrac = null; tick(); } 
+  else { updateAllClocks(currentPreviewFrac); }
+}
 
 function toggleDemo() { sweeping ? stopSweep() : startSweep(); }
 
@@ -277,20 +279,16 @@ function animFrame(t) {
   const ease = animProgress < 0.5 ? 2*animProgress*animProgress : -1+(4-2*animProgress)*animProgress;
   currentPreviewFrac = animStart + (animTarget - animStart) * ease;
   updateAllClocks(currentPreviewFrac, isRetAnim);
-  if (animProgress < 1) { 
-    sweepRAF = requestAnimationFrame(animFrame); 
-  } else { 
-    sweepRAF = null; 
-    let cb = animCallback; animCallback = null;
-    if (cb) cb(); 
-  }
+  if (animProgress < 1) { sweepRAF = requestAnimationFrame(animFrame); } 
+  else { sweepRAF = null; let cb = animCallback; animCallback = null; if (cb) cb(); }
 }
 
 function showSetup() { isCalibrating = true; sweeping = false; document.body.classList.add('is-calibrating', 'calibrating-lume'); document.getElementById('setup-overlay').style.display = 'flex'; syncSliders(); }
 
 function syncSliders() { 
   ['rotation', 'nudge6am', 'nudge3pm', 'nudgeMid', 'trackYFrac', 'ptrRatio', 'nudgeDotsY', 'nudgePtrLumeY', 'ptrNudgeX'].forEach(k => { 
-    const el = document.getElementById('sl-'+k); if(el) { 
+    const el = document.getElementById('sl-'+k); 
+    if(el) { 
       const isPct = ['trackYFrac','nudgeDotsY','nudgePtrLumeY'].includes(k);
       el.value = isPct ? wip[k] * 100 : wip[k];
       document.getElementById('val-'+k).textContent = isPct ? Math.round(wip[k]*100)+'%' : wip[k]; 
@@ -329,12 +327,10 @@ async function finishSetup() {
     cal = Object.assign({}, wip);
     localStorage.setItem('lc_cal', JSON.stringify(cal)); 
     document.body.classList.remove('calibrating-lume', 'night-mode');
-    try { await fetch("/done", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(cal) }); } catch(e){}
-    setTimeout(() => { 
-        isCalibrating = false; previewLockFrac = null;
-        document.getElementById('setup-overlay').style.display = 'none'; 
-        btn.textContent = originalText; tick(); 
-    }, 800);
+    
+    const payload = JSON.stringify(cal);
+    try { await fetch("/done", { method: "POST", headers: {"Content-Type": "application/json"}, body: payload }); } catch(e){}
+    setTimeout(() => { isCalibrating = false; previewLockFrac = null; document.getElementById('setup-overlay').style.display = 'none'; btn.textContent = originalText; tick(); }, 800);
 }
 
 window.onload = () => { 
