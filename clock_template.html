@@ -9,8 +9,7 @@
   :root {
     --bg:#0d0b08; --gold:#c8a96e; --gold2:#e8c98e; --text:#d4c5a9; --muted:#7a6a52;
     --clock-white: #fdfdfd; --clock-black: #1a1a1a; --clock-red: #cc0000;
-    --lume: #9dff9d; 
-    --night-dim: 0.5;
+    --lume: #9dff9d; --night-dim: 0.5;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{
@@ -19,33 +18,28 @@
     align-items:center; user-select:none; padding-bottom: env(safe-area-inset-bottom);
   }
 
-  #night-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: black; pointer-events: none; z-index: 50; opacity: 0; transition: opacity 0.4s;
-  }
+  #night-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; pointer-events: none; z-index: 50; opacity: 0; transition: opacity 0.4s; }
   body.night-mode #night-overlay { opacity: var(--night-dim); }
 
   #clock-view{display:flex; flex-direction:column; align-items:center; justify-content:center; flex-grow:1; width:100%; padding:20px; position:relative;}
   
-  #level-guide {
-    position: absolute; top: 32%; left: 0; width: 100%; height: 2px;
-    background: rgba(200, 169, 110, 0.7); box-shadow: 0 0 12px var(--gold);
-    z-index: 100; display: none; pointer-events: none;
-  }
+  #level-guide { position: absolute; top: 32%; left: 0; width: 100%; height: 2px; background: rgba(200, 169, 110, 0.7); box-shadow: 0 0 12px var(--gold); z-index: 100; display: none; pointer-events: none; }
   body.show-guide #level-guide { display: block; }
 
   #clock-stage{position:relative; width:min(90vw, 960px); display:inline-block; overflow:visible;}
   #face-img{width:100%; display:block; filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7)); transition: filter 0.4s;}
   
-  body.night-mode #face-img, body.night-mode #ptr-img, body.night-mode #time-strip { 
-    filter: brightness(calc(1 - var(--night-dim))); 
-  }
+  body.night-mode #face-img, body.night-mode #ptr-img { filter: brightness(calc(1 - var(--night-dim))); }
+  body.night-mode #time-strip { filter: brightness(calc((1 - var(--night-dim)) * 0.25)); }
 
-  #ptr-wrap{position:absolute; pointer-events:none; will-change:left; z-index:65; width: 0; overflow: visible;}
-  #ptr-img{height:100%; width: auto; object-fit: contain; transition: filter 0.4s; transform: translateX(-50%);}
+  #ptr-wrap { 
+    position: absolute; pointer-events: none; will-change: left; z-index: 65; 
+    width: 0; display: flex; flex-direction: column; align-items: center; 
+  }
+  #ptr-img { height: auto; width: auto; transform: translateY(-50%); }
 
   #ptr-lume {
-    position: absolute; top: 22%; left: 0; transform: translate(-50%, -50%);
+    position: absolute; left: 0; transform: translate(-50%, -50%);
     width: 10px; height: 10px; background: var(--lume); border-radius: 50%;
     box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8); opacity: 0; transition: opacity 0.5s; z-index: 66;
   }
@@ -66,20 +60,21 @@
 
   #setup-overlay {
     display:none; position: absolute; bottom: 8%; width:min(95vw, 800px); background:rgba(15,13,10,0.98);
-    border:1px solid var(--muted); padding:15px; flex-direction:column; align-items:center; border-radius:12px; z-index:1000;
+    border:1px solid var(--muted); padding:20px; flex-direction:column; align-items:center; border-radius:12px; z-index:1000;
     box-shadow: 0 0 40px rgba(0,0,0,0.9);
   }
+  .setup-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .setup-header h2 { font-size: 0.9rem; color: var(--gold); letter-spacing: 0.1em; }
+  .done-btn-top { background: var(--gold); color: black; border: none; padding: 5px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+
   .sl-row { display:grid; grid-template-columns:120px 1fr 60px; align-items:center; gap:15px; width:100%; margin-bottom:8px; }
   .sl-row label { font-size:0.7rem; color:var(--muted); text-transform:uppercase; font-weight: bold; letter-spacing: 0.05em;}
   .sl-row span { font-family: monospace; color: var(--gold); text-align: right; font-size: 0.85rem;}
-  
-  #setup-overlay input[type="range"] { 
-    width: 100%; height: 28px; accent-color: var(--gold); cursor: pointer;
-  }
+  #setup-overlay input[type="range"] { width: 100%; height: 28px; accent-color: var(--gold); cursor: pointer; }
 
   #toolbar { position:fixed; bottom: calc(10px + env(safe-area-inset-bottom)); right: 10px; display:flex; gap:12px; align-items:center; z-index:2000; }
   .tool-group { display: flex; align-items: center; gap: 8px; background: rgba(20, 18, 15, 0.8); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(122, 106, 82, 0.3); }
-  .tool-btn { background:none; border:none; color:var(--muted); cursor:pointer; opacity:0.7; font-size: 1.1rem; font-weight: 600; padding: 6px;}
+  .tool-btn { background:none; border:none; color:var(--muted); cursor:pointer; opacity:0.7; font-size: 1.1rem; font-weight: 600; padding: 6px; text-decoration: none;}
   .tool-btn.active, .tool-btn:hover { color: var(--gold); opacity: 1; }
   
   .slider-wrap { display: flex; align-items: center; gap: 6px; font-family: monospace; color: var(--gold); font-size: 0.75rem; }
@@ -116,19 +111,25 @@
   </div>
 
   <div id="setup-overlay">
+    <div class="setup-header">
+        <h2>CALIBRATION</h2>
+        <button id="done-btn-top" class="done-btn-top" onclick="finishSetup()">DONE</button>
+    </div>
     <div class="sl-row"><label>Leveling</label><input type="range" id="sl-rotation" min="-10" max="10" step="0.01" oninput="onSl('rotation', this.value)" onmousedown="document.body.classList.add('show-guide')" onmouseup="document.body.classList.remove('show-guide')"><span id="val-rotation">0</span></div>
-    <div class="sl-row"><label>6 AM Start</label><input type="range" id="sl-nudge6am" min="-15" max="15" step="0.1" oninput="onAnchor('nudge6am', this.value)"><span id="val-nudge6am">0</span></div>
-    <div class="sl-row"><label>3 PM Middle</label><input type="range" id="sl-nudge3pm" min="-15" max="15" step="0.1" oninput="onAnchor('nudge3pm', this.value)"><span id="val-nudge3pm">0</span></div>
-    <div class="sl-row"><label>Midnight End</label><input type="range" id="sl-nudgeMid" min="-15" max="15" step="0.1" oninput="onAnchor('nudgeMid', this.value)"><span id="val-nudgeMid">0</span></div>
-    <div class="sl-row"><label>Lume Height</label><input type="range" id="sl-nudgeDotsY" min="10" max="95" step="0.1" oninput="onSl('nudgeDotsY', this.value/100)"><span id="val-nudgeDotsY">0</span></div>
-    <div class="sl-row"><label>Pointer Height</label><input type="range" id="sl-trackYFrac" min="20" max="95" step="0.1" oninput="onSl('trackYFrac', this.value/100)"><span id="val-trackYFrac">0</span></div>
+    <div class="sl-row"><label>6 AM Start</label><input type="range" id="sl-nudge6am" min="0" max="100" step="0.1" oninput="onAnchor('nudge6am', this.value)"><span id="val-nudge6am">0</span></div>
+    <div class="sl-row"><label>3 PM Middle</label><input type="range" id="sl-nudge3pm" min="0" max="100" step="0.1" oninput="onAnchor('nudge3pm', this.value)"><span id="val-nudge3pm">0</span></div>
+    <div class="sl-row"><label>Midnight End</label><input type="range" id="sl-nudgeMid" min="0" max="100" step="0.1" oninput="onAnchor('nudgeMid', this.value)"><span id="val-nudgeMid">0</span></div>
+    <div class="sl-row"><label>Pointer Align</label><input type="range" id="sl-ptrNudgeX" min="-20" max="20" step="0.01" oninput="onSl('ptrNudgeX', this.value)"><span id="val-ptrNudgeX">0</span></div>
+    <div class="sl-row"><label>Lume Height</label><input type="range" id="sl-nudgeDotsY" min="5" max="95" step="0.1" oninput="onSl('nudgeDotsY', this.value/100)"><span id="val-nudgeDotsY">0</span></div>
+    <div class="sl-row"><label>Pointer Height</label><input type="range" id="sl-trackYFrac" min="5" max="95" step="0.1" oninput="onSl('trackYFrac', this.value/100)"><span id="val-trackYFrac">0</span></div>
+    <div class="sl-row"><label>Ptr Lume Vert</label><input type="range" id="sl-nudgePtrLumeY" min="5" max="95" step="0.1" oninput="onSl('nudgePtrLumeY', this.value/100)"><span id="val-nudgePtrLumeY">0</span></div>
     <div class="sl-row"><label>Pointer Size</label><input type="range" id="sl-ptrRatio" min="0.1" max="0.8" step="0.01" oninput="onSl('ptrRatio', this.value)"><span id="val-ptrRatio">0</span></div>
-    <button id="done-btn" onclick="finishSetup()" style="margin-top:10px; background:var(--gold); padding:10px 30px; border:none; font-weight:bold; cursor:pointer; color: black; border-radius: 6px; width: 100%; font-size: 1.1rem;">SAVE CALIBRATION</button>
   </div>
 </div>
 
 <div id="toolbar">
   <div class="tool-group">
+    <a href="https://linearclockworks.com/products/rufino-bolivian-rosewood-surface-river" class="tool-btn" target="_blank">Details</a>
     <button class="tool-btn" id="btn-demo" onclick="toggleDemo()">Demo</button>
     <div class="slider-wrap">
       <span>Spd</span>
@@ -136,12 +137,8 @@
       <span id="val-demoSpeed">1x</span>
     </div>
   </div>
-
   <div class="tool-group">
-    <div class="slider-wrap">
-      <span>🌙 Dim</span>
-      <input type="range" id="sl-mainNightDim" min="0" max="0.9" step="0.01" oninput="onSl('nightDim', this.value)">
-    </div>
+    <div class="slider-wrap"><span>🌙 Dim</span><input type="range" id="sl-mainNightDim" min="0" max="0.9" step="0.01" onmousedown="forceNightPreview(true)" onmouseup="forceNightPreview(false)" oninput="onSl('nightDim', this.value)"></div>
     <button class="tool-btn" onclick="toggleClock('analog')">🕒</button>
     <button class="tool-btn" onclick="toggleClock('digital')">🔢</button>
     <button class="tool-btn" onclick="showSetup()">⚙️</button>
@@ -152,15 +149,23 @@
 let wakeLock = null, demoTimer = null;
 async function requestWakeLock() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} } }
 
-const DEFAULTS = { rotation: 0, leftFrac:0.12, rightFrac:0.852, trackYFrac:0.554, nudge6am:0, nudge3pm:0, nudgeMid:0, ptrRatio:0.28, nudgeDotsY:0.45, demoSpeed: 1.0, nightDim: 0.5, version: 1.5 };
+const DEFAULTS = { 
+  rotation: 0.14, trackYFrac: 0.38, 
+  nudge6am: 7.5, nudge3pm: 48.0, nudgeMid: 88.5, 
+  ptrRatio: 0.47, nudgeDotsY: 0.31, nudgePtrLumeY: 0.20, ptrNudgeX: 0,
+  demoSpeed: 2.3, nightDim: 0.46, version: 3.4 
+};
+
 let cal = loadCal(), wip = Object.assign({}, cal);
-let sweeping = false, isCalibrating = false, currentPreviewFrac = 0;
+let sweeping = false, isCalibrating = false, currentPreviewFrac = 0, isGlidingBack = false, isForceNight = false;
+let previewLockFrac = null; 
 let sweepRAF = null, lastAnimTime = 0, animTarget = 0, animStart = 0, animDuration = 0, animCallback = null, isRetAnim = false;
 
 function loadCal() { 
   try { 
     const saved = JSON.parse(localStorage.getItem('lc_cal'));
     if (saved && saved.version === DEFAULTS.version) return Object.assign({}, DEFAULTS, saved);
+    localStorage.setItem('lc_cal', JSON.stringify(DEFAULTS));
     return DEFAULTS;
   } catch(e){ return DEFAULTS; } 
 }
@@ -181,19 +186,19 @@ function timeToFrac(n) {
 }
 
 function getCorrectedX(f, c) {
-  const n6 = (parseFloat(c.nudge6am)||0)/100, n3 = (parseFloat(c.nudge3pm)||0)/100, nMid = (parseFloat(c.nudgeMid)||0)/100;
-  const left = c.leftFrac + n6, right = c.rightFrac + nMid;
-  const m = 0.5 + (n3 / (right - left || 1));
-  return (left + ((2-4*m)*f*f + (4*m-1)*f) * (right - left));
+  const x0 = c.nudge6am / 100, x1 = c.nudge3pm / 100, x2 = c.nudgeMid / 100;
+  const a = 2*x2 + 2*x0 - 4*x1;
+  const b = 4*x1 - 3*x0 - x2;
+  return (a * f * f) + (b * f) + x0;
 }
 
 function updateAllClocks(frac, isReturning = false) {
   const activeCal = isCalibrating ? wip : cal;
-  const face = document.getElementById('face-img'), wrap = document.getElementById('ptr-wrap');
+  const face = document.getElementById('face-img'), wrap = document.getElementById('ptr-wrap'), ptrImg = document.getElementById('ptr-img'), ptrLume = document.getElementById('ptr-lume');
   const imgW = face.clientWidth, imgH = face.clientHeight;
-  if (!imgW) return;
-
-  const isNight = isReturning || (timeToFrac(new Date()) === 0 && !isCalibrating);
+  if (!imgW || !imgH) return;
+  
+  const isNight = isForceNight || isReturning || (timeToFrac(new Date()) === 0 && !isCalibrating);
   document.body.classList.toggle('night-mode', isNight);
   face.style.transform = `rotate(${activeCal.rotation || 0}deg)`;
 
@@ -205,23 +210,32 @@ function updateAllClocks(frac, isReturning = false) {
     }
   }
 
-  const pH = imgH * activeCal.ptrRatio;
-  wrap.style.height = pH + "px";
-  wrap.style.top = (imgH * activeCal.trackYFrac - pH * 0.92) + "px";
-  wrap.style.left = (getCorrectedX(frac, activeCal) * imgW) + "px";
+  // Pointer position logic: base path + independent alignment nudge
+  const basePathX = getCorrectedX(frac, activeCal) * imgW;
+  const indyNudge = (parseFloat(activeCal.ptrNudgeX) || 0) * imgW / 100;
+  wrap.style.left = (basePathX + indyNudge) + "px";
+  wrap.style.top = (imgH * activeCal.trackYFrac) + "px";
 
-  let totalMins = frac * (18 * 60);
-  let vH24 = 6 + Math.floor(totalMins / 60);
-  let vM = Math.floor(totalMins % 60);
+  const pH = imgH * activeCal.ptrRatio;
+  ptrImg.style.height = pH + "px";
+  
+  // Lume follows Assembly height (tracks ptr image tip)
+  ptrLume.style.top = (imgH * activeCal.nudgePtrLumeY - (imgH * activeCal.trackYFrac)) + "px";
+
+  let totalMins = frac * (18 * 60), vH24 = 6 + Math.floor(totalMins / 60), vM = Math.floor(totalMins % 60);
   document.getElementById('digital-clock').textContent = `${vH24 % 12 || 12}:${String(vM).padStart(2,'0')} ${vH24 >= 12 && vH24 < 24 ? 'PM' : 'AM'}`;
   document.getElementById('hand-h').style.transform = `rotate(${vH24*30 + vM*0.5}deg)`;
   document.getElementById('hand-m').style.transform = `rotate(${vM*6}deg)`;
 }
 
+function forceNightPreview(on) { isForceNight = on; updateAllClocks(currentPreviewFrac); }
+
 function toggleDemo() { sweeping ? stopSweep() : startSweep(); }
 
 function startSweep() {
-  stopSweep();
+  if (sweepRAF) cancelAnimationFrame(sweepRAF);
+  if (demoTimer) clearTimeout(demoTimer);
+  isGlidingBack = false;
   sweeping = true; document.getElementById('btn-demo').textContent = "Stop";
   const steps = [...Array(19).keys()].map(i => i/18);
   const returnSteps = [5/6, 4/6, 3/6, 2/6, 1/6, 0]; 
@@ -229,11 +243,7 @@ function startSweep() {
 
   const next = () => {
     if (!sweeping) return;
-    const speed = cal.demoSpeed || 0;
-    if (speed === 0) { // If paused, wait 100ms and check again
-        demoTimer = setTimeout(next, 100);
-        return;
-    }
+    const speed = cal.demoSpeed || 1;
     if (!isNight) {
       if (i >= steps.length) { isNight = true; i = 0; demoTimer = setTimeout(next, 400/speed); return; }
       animateToFrac(steps[i++], 800/speed, false, () => { demoTimer = setTimeout(next, 400/speed); });
@@ -250,8 +260,10 @@ function stopSweep() {
   document.getElementById('btn-demo').textContent = "Demo";
   if (sweepRAF) cancelAnimationFrame(sweepRAF);
   if (demoTimer) clearTimeout(demoTimer);
+  sweepRAF = null; demoTimer = null;
   animCallback = null;
-  animateToFrac(timeToFrac(new Date()), 1500, false, null);
+  isGlidingBack = true;
+  animateToFrac(timeToFrac(new Date()), 1500, false, () => { isGlidingBack = false; });
 }
 
 function animateToFrac(target, duration, isRet, onDone) {
@@ -261,17 +273,12 @@ function animateToFrac(target, duration, isRet, onDone) {
 }
 
 function animFrame(t) {
-  const dt = t - lastAnimTime; lastAnimTime = t;
-  const speedFactor = cal.demoSpeed === 0 ? 0 : 1; 
-  // If speed is 0, dt effective becomes 0, freezing progress
-  animProgress = Math.min(animProgress + (dt * speedFactor) / animDuration, 1);
-  
+  const dt = t - lastAnimTime; lastAnimTime = t; animProgress = Math.min(animProgress + dt / animDuration, 1);
   const ease = animProgress < 0.5 ? 2*animProgress*animProgress : -1+(4-2*animProgress)*animProgress;
   currentPreviewFrac = animStart + (animTarget - animStart) * ease;
   updateAllClocks(currentPreviewFrac, isRetAnim);
-  
-  if (animProgress < 1 || cal.demoSpeed === 0) {
-      sweepRAF = requestAnimationFrame(animFrame);
+  if (animProgress < 1) { 
+    sweepRAF = requestAnimationFrame(animFrame); 
   } else { 
     sweepRAF = null; 
     let cb = animCallback; animCallback = null;
@@ -282,12 +289,11 @@ function animFrame(t) {
 function showSetup() { isCalibrating = true; sweeping = false; document.body.classList.add('is-calibrating', 'calibrating-lume'); document.getElementById('setup-overlay').style.display = 'flex'; syncSliders(); }
 
 function syncSliders() { 
-  ['rotation', 'nudge6am', 'nudge3pm', 'nudgeMid', 'trackYFrac', 'ptrRatio', 'nudgeDotsY'].forEach(k => { 
-    const el = document.getElementById('sl-'+k); 
-    if(el) { 
-      el.value = wip[k]; 
-      const isPercent = ['trackYFrac','ptrRatio','nudgeDotsY'].includes(k);
-      document.getElementById('val-'+k).textContent = isPercent ? Math.round(wip[k]*100)+'%' : wip[k]; 
+  ['rotation', 'nudge6am', 'nudge3pm', 'nudgeMid', 'trackYFrac', 'ptrRatio', 'nudgeDotsY', 'nudgePtrLumeY', 'ptrNudgeX'].forEach(k => { 
+    const el = document.getElementById('sl-'+k); if(el) { 
+      const isPct = ['trackYFrac','nudgeDotsY','nudgePtrLumeY'].includes(k);
+      el.value = isPct ? wip[k] * 100 : wip[k];
+      document.getElementById('val-'+k).textContent = isPct ? Math.round(wip[k]*100)+'%' : wip[k]; 
     } 
   }); 
   document.getElementById('sl-mainNightDim').value = wip.nightDim;
@@ -295,59 +301,57 @@ function syncSliders() {
 
 function onSl(k, v) { 
   wip[k] = parseFloat(v); 
-  if (k === 'nightDim') {
-    document.documentElement.style.setProperty('--night-dim', v);
-    document.body.classList.add('night-mode'); 
-    cal.nightDim = wip.nightDim;
-    localStorage.setItem('lc_cal', JSON.stringify(cal));
-  } else {
-    const isPercent = ['trackYFrac','ptrRatio','nudgeDotsY'].includes(k);
-    const valEl = document.getElementById('val-'+k);
-    if (valEl) valEl.textContent = isPercent ? Math.round(v*100)+'%' : v; 
-    updateAllClocks(0.5); 
+  if (k === 'nightDim') { document.documentElement.style.setProperty('--night-dim', v); } 
+  else { 
+    const isPct = ['trackYFrac','ptrRatio','nudgeDotsY', 'nudgePtrLumeY'].includes(k); 
+    const valEl = document.getElementById('val-'+k); 
+    if (valEl) valEl.textContent = isPct ? Math.round(wip[k]*100)+'%' : v; 
   }
+  const preview = (previewLockFrac !== null) ? previewLockFrac : 0.5;
+  currentPreviewFrac = preview;
+  updateAllClocks(preview); 
 }
 
-function onAnchor(k, v) { wip[k] = parseFloat(v); document.getElementById('val-'+k).textContent = v; if(k==='nudge6am') updateAllClocks(0); else if(k==='nudge3pm') updateAllClocks(0.5); else updateAllClocks(1); }
-function onSpeedSl(v) { 
-    cal.demoSpeed = parseFloat(v); 
-    document.getElementById('val-demoSpeed').textContent = v === "0" ? "Pause" : v + 'x'; 
+function onAnchor(k, v) { 
+  wip[k] = parseFloat(v); 
+  document.getElementById('val-'+k).textContent = v; 
+  const preview = (k === 'nudge6am') ? 0 : (k === 'nudge3pm' ? 0.5 : 1);
+  previewLockFrac = preview; currentPreviewFrac = preview; updateAllClocks(preview); 
 }
+
+function onSpeedSl(v) { cal.demoSpeed = parseFloat(v); document.getElementById('val-demoSpeed').textContent = v + 'x'; }
 function toggleClock(t) { document.getElementById(t+'-clock').classList.toggle('visible'); }
 
 async function finishSetup() { 
-    const btn = document.getElementById('done-btn');
-    btn.textContent = "SAVING...";
-    btn.disabled = true;
+    const btn = document.getElementById('done-btn-top'); 
+    const originalText = btn.textContent;
+    btn.textContent = "..."; 
     cal = Object.assign({}, wip);
-    localStorage.setItem('lc_cal', JSON.stringify(cal));
-    document.body.classList.remove('calibrating-lume');
-    
-    fetch("/done", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(cal)
-    }).catch(e => console.log("Standalone mode save."));
-
-    setTimeout(() => {
-        isCalibrating = false;
-        document.getElementById('setup-overlay').style.display = 'none';
-        btn.disabled = false;
-        btn.textContent = "SAVE CALIBRATION";
-        tick();
+    localStorage.setItem('lc_cal', JSON.stringify(cal)); 
+    document.body.classList.remove('calibrating-lume', 'night-mode');
+    try { await fetch("/done", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(cal) }); } catch(e){}
+    setTimeout(() => { 
+        isCalibrating = false; previewLockFrac = null;
+        document.getElementById('setup-overlay').style.display = 'none'; 
+        btn.textContent = originalText; tick(); 
     }, 800);
 }
 
 window.onload = () => { 
   initLume(); 
-  document.documentElement.style.setProperty('--night-dim', cal.nightDim);
-  document.getElementById('sl-mainNightDim').value = cal.nightDim;
-  document.getElementById('sl-demoSpeed').value = cal.demoSpeed;
-  document.getElementById('val-demoSpeed').textContent = cal.demoSpeed === 0 ? "Pause" : cal.demoSpeed + 'x';
+  document.documentElement.style.setProperty('--night-dim', cal.nightDim); 
+  document.getElementById('sl-mainNightDim').value = cal.nightDim; 
+  document.getElementById('sl-demoSpeed').value = cal.demoSpeed; 
+  document.getElementById('val-demoSpeed').textContent = cal.demoSpeed + 'x'; 
   tick(); 
-  setInterval(() => { if(!sweeping && !isCalibrating) tick(); }, 1000); 
+  setInterval(() => { if(!sweeping && !isCalibrating && !isGlidingBack) tick(); }, 1000); 
 };
-function tick() { currentPreviewFrac = timeToFrac(new Date()); updateAllClocks(currentPreviewFrac); }
+
+function tick() { 
+  if (isCalibrating) return;
+  currentPreviewFrac = timeToFrac(new Date()); 
+  updateAllClocks(currentPreviewFrac); 
+}
 </script>
 </body>
 </html>
