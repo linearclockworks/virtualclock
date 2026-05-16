@@ -1,28 +1,40 @@
 #!/usr/bin/python3
 import argparse, base64, io, os, sys, json, re, threading, webbrowser, time
 
-print("--- Initializing Industrial Clockworks Build System ---")
+print("--- Initializing Industrial Clockworks Build System (v13.0) ---")
 try:
-    import requests as _requests
     from PIL import Image
-    import numpy as np
-    import cv2
     from http.server import HTTPServer, BaseHTTPRequestHandler
-    from requests.adapters import HTTPAdapter
-    from urllib3.util.retry import Retry
 except ImportError as e:
-    sys.exit(f"Missing dependency: {e}. Run: pip install requests pillow numpy opencv-python")
+    sys.exit(f"Missing dependency: {e}. Run: pip install pillow")
 
 # --- Shopify & App Config ---
 SHOPIFY_SHOP    = os.environ.get('SHOPIFY_SHOP_NAME', 'linear-clockworks.myshopify.com')
 SHOPIFY_TOKEN   = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
 SHOPIFY_API_VER = '2024-01'
 
-DEFAULTS = dict(leftFrac=0.12, rightFrac=0.852, trackYFrac=0.554, nudge6am=0, nudge3pm=0, nudgeMid=0, sweepSpeed=1.0, ptrRatio=0.28, nudgeDotsY=0.45, nightDim=0.5)
+# All pct-based values (0-100). nudge6am/3pm/Mid estimated from product photo pixel positions.
+DEFAULTS = {
+    "rotation": 0.14,
+    "trackYFrac": 38.0,
+    "nudge6am": 5.5,
+    "nudge3pm": 50.0,
+    "nudgeMid": 92.0,
+    "ptrRatio": 47.0,
+    "nudgeDotsY": 31.0,
+    "nudgePtrLumeY": 32.0,
+    "ptrNudgeX": -1.2,
+    "demoSpeed": 2.3,
+    "nightDim": 0.46,
+    "version": 13.0
+}
 TEMPLATE = os.path.join(os.path.dirname(__file__), 'clock_template.html')
 REQ_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
 
 def shopify_graphql(query, variables=None):
+    import requests as _requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
     url = f'https://{SHOPIFY_SHOP}/admin/api/{SHOPIFY_API_VER}/graphql.json'
     session = _requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
@@ -62,6 +74,8 @@ def get_friendly_name(title):
     return re.sub(r'[^\w\s-]', '', name).replace(' ', '-')
 
 def straightening_process(img):
+    import numpy as np
+    import cv2
     print("  [OpenCV] Leveling wood grain horizon...")
     cv_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
@@ -85,7 +99,6 @@ def main():
     sku = args.sku.upper()
     cal_json = f'{sku}-cal.json'
     
-    # Attempt to retrieve cached Shopify ID from existing calibration file
     cached_id = None
     if os.path.exists(cal_json):
         try:
@@ -99,13 +112,19 @@ def main():
     fname = get_friendly_name(product['title'])
     f_cache, p_cache = f'{sku}_face.png', f'{sku}_ptr.png'
 
+    if not os.path.exists(f_cache) or not os.path.exists(p_cache):
+        import requests as _requests
     if not os.path.exists(f_cache):
+        print(f"  [Download] Fetching face image...")
         img_data = _requests.get(product['images'][5], headers=REQ_HEADERS).content
         img = Image.open(io.BytesIO(img_data)).convert('RGB')
         straightening_process(img).save(f_cache)
+        print(f"  [Cache] Saved {f_cache}")
     if not os.path.exists(p_cache):
+        print(f"  [Download] Fetching pointer image...")
         ptr_data = _requests.get(product['images'][4], headers=REQ_HEADERS).content
         Image.open(io.BytesIO(ptr_data)).convert('RGBA').save(p_cache)
+        print(f"  [Cache] Saved {p_cache}")
 
     f_b64 = base64.b64encode(open(f_cache, 'rb').read()).decode()
     p_b64 = base64.b64encode(open(p_cache, 'rb').read()).decode()
@@ -113,16 +132,27 @@ def main():
     with open(TEMPLATE, 'r') as f: html = f.read()
     html = html.replace('FACE_DATA_URI', f'data:image/png;base64,{f_b64}').replace('PTR_DATA_URI', f'data:image/png;base64,{p_b64}')
     
+    # Merge cal JSON over DEFAULTS
     cal = DEFAULTS.copy()
     if os.path.exists(cal_json):
-        with open(cal_json, 'r') as j: cal.update(json.load(j))
+        with open(cal_json, 'r') as j:
+            saved_data = json.load(j)
+        if saved_data.get('version') == 13.0:
+            cal.update(saved_data)
+            print(f"  [Cal] Loaded v13 calibration from {cal_json}")
+        else:
+            print(f"  [Cal] Ignoring {cal_json} (version={saved_data.get('version','none')}, not v13) — using DEFAULTS")
 
-    html = re.sub(r'const DEFAULTS = \{[^}]+\};', f"const DEFAULTS = {json.dumps(cal)};", html)
+    cal['productSku'] = sku
+    cal['version'] = 13.0
+
+    # Inject cal values — simple sentinel replace, no regex needed
+    html = html.replace('CAL_JSON_HERE', json.dumps(cal, indent=2))
 
     if args.calibrate:
         cal_out = f'{sku}_calibrate.html'
-        done_bar = f'<div id="cal-bar" style="position:fixed;top:0;left:0;right:0;background:#111;color:#fff;padding:10px;z-index:10000;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c8a96e;font-family:sans-serif;"><span>Calibrating: {sku}</span><button onclick="sendDone()" style="background:#c8a96e;border:none;padding:5px 15px;cursor:pointer;font-weight:bold;color:#000;">Done</button></div>'
-        done_bar += '<script>function sendDone(){ fetch("/done",{method:"POST",body:localStorage.getItem("lc_cal")}).then(()=>window.close()); }</script>'
+        done_bar = f'<div id="cal-bar" style="position:fixed;top:0;left:0;right:0;background:#111;color:#fff;padding:10px;z-index:10000;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c8a96e;font-family:sans-serif;"><span>Calibrating: {sku}</span><button onclick="sendDone()" style="background:#c8a96e;border:none;padding:5px 15px;cursor:pointer;font-weight:bold;color:#000;">SAVE TO PWA</button></div>'
+        done_bar += '<script>function sendDone(){ fetch("/done",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(window.__wipCal||{})}).then(()=>window.close()); }</script>'
         html = html.replace('</body>', done_bar + '</body>')
         with open(cal_out, 'w') as f: f.write(html)
         
@@ -130,7 +160,12 @@ def main():
         class H(BaseHTTPRequestHandler):
             def do_GET(self): self.send_response(200); self.end_headers(); self.wfile.write(open(cal_out, 'rb').read())
             def do_POST(self):
-                cal_result.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+                length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(length) if length else b''
+                try:
+                    cal_result.append(json.loads(body))
+                except json.JSONDecodeError:
+                    print(f"  [Warning] Empty or invalid POST body, ignoring")
                 self.send_response(200); self.end_headers()
             def log_message(self, *a): pass
         
@@ -139,7 +174,6 @@ def main():
         webbrowser.open('http://localhost:19888')
         while not cal_result: time.sleep(0.5)
         
-        # Merge calibration result with the Shopify ID for future fast lookups
         save_data = cal_result[0]
         save_data['shopify_id'] = product['id']
         with open(cal_json, 'w') as j: json.dump(save_data, j, indent=2)
@@ -161,13 +195,11 @@ def main():
         with open(sw_name, 'w') as f: f.write(sw_content)
         with open(mn_name, 'w') as f: json.dump(manifest, f, indent=2)
         
-        # TERMINAL OUTPUT
-        pwa_url = f"https://linearclockworks.github.io/virtualclock/{fname}.html"
         print(f"\n[Success] PWA Build Complete: {fname}")
         print("-" * 45)
-        print(f"URL: {pwa_url}")
+        print(f"URL: https://linearclockworks.github.io/virtualclock/{fname}.html")
         print(f"git add {fname}.html {sw_name} {mn_name}")
-        print(f"git commit -m \"{fname} teaching clock build\"")
+        print(f'git commit -m "{fname} teaching clock build"')
         print(f"git push")
         print("-" * 45)
 
