@@ -156,21 +156,11 @@ const DEFAULTS = {
   "shopify_id": "gid://shopify/Product/8175920578649"
 };
 
-let cal = loadCal(), wip = Object.assign({}, cal);
+let cal = Object.assign({}, DEFAULTS), wip = Object.assign({}, DEFAULTS);
 let sweeping = false, isCalibrating = false, currentPreviewFrac = 0, isForceNight = false;
 let previewLockFrac = null, sweepRAF = null, lastAnimTime = 0, animTarget = 0, animStart = 0, animDuration = 0, animCallback = null;
-let clockDisplayFrac = 0; // unused sentinel — remove next cleanup
 
 async function requestWakeLock() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} } }
-
-function loadCal() { 
-  try { 
-    const saved = JSON.parse(localStorage.getItem('lc_cal'));
-    if (saved && saved.version === DEFAULTS.version) return Object.assign({}, DEFAULTS, saved);
-    localStorage.setItem('lc_cal', JSON.stringify(DEFAULTS));
-    return DEFAULTS;
-  } catch(e){ return DEFAULTS; } 
-}
 
 function initLume() {
   const row = document.getElementById('lume-row'); row.innerHTML = '';
@@ -311,24 +301,13 @@ function toggleClock(t) { document.getElementById(t+'-clock').classList.toggle('
 async function finishSetup() { 
     const btn = document.querySelector('.done-btn-top'); btn.textContent = "..."; 
     cal = Object.assign({}, wip);
-    localStorage.setItem('lc_cal', JSON.stringify(cal)); 
     document.body.classList.remove('calibrating-lume', 'night-mode');
     try { await fetch("/done", { method: "POST", body: JSON.stringify(cal) }); } catch(e){}
     setTimeout(() => { isCalibrating = false; previewLockFrac = null; document.getElementById('setup-overlay').style.display = 'none'; btn.textContent = "DONE"; tick(); }, 800);
 }
 
 window.onload = () => { 
-  // If localStorage has stale data from a different version, wipe SWs + storage so
-  // the freshly-baked DEFAULTS (embedded in this HTML by build_clock.py) take effect.
-  try {
-    const saved = JSON.parse(localStorage.getItem('lc_cal'));
-    if (saved && saved.version !== DEFAULTS.version) {
-      localStorage.removeItem('lc_cal');
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
-      }
-    }
-  } catch(e) {}
+  try { localStorage.removeItem('lc_cal'); } catch(e) {}  // nuke any legacy stale data
   initLume(); 
   document.getElementById('details-link').href = "https://linearclockworks.com/search?q=" + (cal.productSku || "LCK-1040");
   document.documentElement.style.setProperty('--night-dim', cal.nightDim); 
