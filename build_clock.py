@@ -189,7 +189,12 @@ def main():
         pwa_head = f'<link rel="manifest" href="./{mn_name}"><meta name="theme-color" content="#0d0b08"><link rel="apple-touch-icon" href="data:image/png;base64,{f_b64}"><script>if(\'serviceWorker\' in navigator){{window.addEventListener(\'load\',()=>{{navigator.serviceWorker.register(\'./{sw_name}\');}});}}</script>'
         html = html.replace('</head>', pwa_head + '</head>')
         
-        sw_content = f"const CACHE=\'lc-{fname}-{cv}\';self.addEventListener(\'install\',e=>{{e.waitUntil(caches.open(CACHE).then(c=>c.add(new Request(\'./{fname}.html\',{{cache:\'reload\'}}))));self.skipWaiting();}});self.addEventListener(\'activate\',e=>{{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(\'lc-{fname}-\')&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();}});self.addEventListener(\'fetch\',e=>{{if(e.request.url.endsWith(\'.html\')||e.request.url.endsWith(\'/\')){{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));}}}});"
+        sw_content = (
+            f"const CACHE='lc-{fname}-{cv}';"
+            f"self.addEventListener('install',e=>{{e.waitUntil(caches.open(CACHE).then(c=>c.add(new Request('./{fname}.html',{{cache:'reload'}}))));self.skipWaiting();}}); "
+            f"self.addEventListener('activate',e=>{{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('lc-{fname}-')&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();}}); "
+            f"self.addEventListener('fetch',e=>{{if(e.request.url.includes('{fname}.html')||e.request.url.endsWith('/')){{e.respondWith(fetch(e.request).then(r=>{{const cl=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,cl));return r;}}).catch(()=>caches.match(e.request)));}}}}); "
+        )
         manifest = {"name":f"Linear Clock {fname}","short_name":fname,"start_url":f"./{fname}.html","display":"standalone","background_color":"#0d0b08","theme_color":"#c8a96e","icons":[{"src":f"data:image/png;base64,{f_b64}","sizes":"512x512","type":"image/png"}]}
         
         with open(f"{fname}.html", 'w') as f: f.write(html)

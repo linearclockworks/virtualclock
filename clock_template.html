@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Industrial Linear Clockworks</title>
+<style id="sku-style">
+  #sku-label { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; font-family: monospace; font-size: 0.65rem; color: var(--muted); opacity: 0.5; z-index: 2000; pointer-events: none; }
+</style>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -52,6 +55,7 @@
 <body onclick="requestWakeLock()">
 <div id="night-overlay"></div>
 <div id="level-guide"></div>
+<div id="sku-label"></div>
 <div id="clock-view">
   <div id="clock-stage">
     <img id="face-img" src="FACE_DATA_URI">
@@ -298,6 +302,10 @@ async function finishSetup() {
 window.onload = () => {
   initLume();
   document.getElementById('details-link').href = cal.productUrl || ("https://linearclockworks.com/search?q=" + (cal.productSku || ""));
+  if (cal.productSku) {
+    document.title = cal.productSku + ' — Linear Clockworks';
+    document.getElementById('sku-label').textContent = cal.productSku;
+  }
   document.documentElement.style.setProperty('--night-dim', cal.nightDim);
   document.getElementById('sl-mainNightDim').value = cal.nightDim;
   document.getElementById('sl-demoSpeed').value = cal.demoSpeed;

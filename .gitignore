@@ -1,3 +1,10 @@
 *.png
 *_calibrate.html
 .DS_Store
+*.swift
+*.txt
+*.webp
+x
+Makefile
+README.md
+*_calibrate.html
