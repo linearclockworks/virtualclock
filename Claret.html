@@ -121,7 +121,8 @@
   "sweepSpeed": 3.75,
   "nudgeDotsX": -0.003,
   "shopify_id": "gid://shopify/Product/8187394588761",
-  "productSku": "LCK-1033"
+  "productSku": "LCK-1033",
+  "productUrl": "https://linearclockworks.com/products/claret-cherry-resin-rta-clock-1033"
 }</script>
 <script>
 let wakeLock = null, demoTimer = null;
@@ -316,7 +317,7 @@ async function finishSetup() {
 
 window.onload = () => {
   initLume();
-  document.getElementById('details-link').href = "https://linearclockworks.com/search?q=" + (cal.productSku || "");
+  document.getElementById('details-link').href = cal.productUrl || ("https://linearclockworks.com/search?q=" + (cal.productSku || ""));
   document.documentElement.style.setProperty('--night-dim', cal.nightDim);
   document.getElementById('sl-mainNightDim').value = cal.nightDim;
   document.getElementById('sl-demoSpeed').value = cal.demoSpeed;

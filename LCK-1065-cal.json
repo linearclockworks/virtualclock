@@ -1,0 +1,20 @@
+{
+  "rotation": 0.14,
+  "trackYFrac": 45.8,
+  "nudge6am": 11.7,
+  "nudge3pm": 49.5,
+  "nudgeMid": 86.226,
+  "ptrRatio": 52,
+  "nudgeDotsY": 40.4,
+  "nudgePtrLumeY": 10.5,
+  "ptrNudgeX": -0.23,
+  "demoSpeed": 2.3,
+  "nightDim": 0,
+  "version": 13,
+  "leftFrac": 0.12,
+  "rightFrac": 0.852,
+  "sweepSpeed": 3.75,
+  "nudgeDotsX": -0.003,
+  "shopify_id": "gid://shopify/Product/8211618529369",
+  "productSku": "LCK-1065"
+}

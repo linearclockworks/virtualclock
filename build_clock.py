@@ -144,6 +144,7 @@ def main():
             print(f"  [Cal] Ignoring {cal_json} (version={saved_data.get('version','none')}, not v13) — using DEFAULTS")
 
     cal['productSku'] = sku
+    cal['productUrl'] = f"https://linearclockworks.com/products/{product['handle']}"
     cal['version'] = 13.0
 
     # Inject cal values — simple sentinel replace, no regex needed

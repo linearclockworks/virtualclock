@@ -1,5 +1,5 @@
 // Cache version changes on every build — forces old SW to update immediately
-const CACHE = 'lc-LCK-1065-1778522529';
+const CACHE = 'lc-LCK-1065-1778522898';
 
 self.addEventListener('install', e => {
   // Cache the HTML using a relative request so it works at any URL path

@@ -121,7 +121,8 @@
   "sweepSpeed": 3.75,
   "nudgeDotsX": -0.003,
   "shopify_id": "gid://shopify/Product/8073530081369",
-  "productSku": "LCK-0988-3-FOOT"
+  "productSku": "LCK-0988-3-FOOT",
+  "productUrl": "https://linearclockworks.com/products/alvaro-3-foot-bolivian-rosewood-resin"
 }</script>
 <script>
 let wakeLock = null, demoTimer = null;
@@ -316,7 +317,7 @@ async function finishSetup() {
 
 window.onload = () => {
   initLume();
-  document.getElementById('details-link').href = "https://linearclockworks.com/search?q=" + (cal.productSku || "");
+  document.getElementById('details-link').href = cal.productUrl || ("https://linearclockworks.com/search?q=" + (cal.productSku || ""));
   document.documentElement.style.setProperty('--night-dim', cal.nightDim);
   document.getElementById('sl-mainNightDim').value = cal.nightDim;
   document.getElementById('sl-demoSpeed').value = cal.demoSpeed;
