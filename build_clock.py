@@ -12,7 +12,7 @@ except ImportError as e:
 SHOPIFY_SHOP    = os.environ.get('SHOPIFY_SHOP_NAME', 'linear-clockworks.myshopify.com')
 SHOPIFY_TOKEN   = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
 SHOPIFY_API_VER = '2024-01'
-GA_MEASUREMENT_ID = 'G-R901YZ7CVT'  # Google Analytics 4 — set '' to disable
+GA_MEASUREMENT_ID = 'G-MF3BXB0T7M'  # Google Analytics 4 — set '' to disable
 
 # All pct-based values (0-100). nudge6am/3pm/Mid estimated from product photo pixel positions.
 DEFAULTS = {
