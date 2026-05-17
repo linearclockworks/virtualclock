@@ -32,10 +32,15 @@
   #lume-row { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
   .lume-dot { position: absolute; width: 10px; height: 10px; background: var(--lume); border-radius: 50%; box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8); opacity: 0; transition: opacity 0.5s; transform: translate(-50%, -50%); }
   body.night-mode .lume-dot, body.calibrating-lume .lume-dot { opacity: 1; }
-  #time-strip {margin-top:25px; display:flex; gap:20px; align-items:center; justify-content:center; min-height:180px; z-index:70; position:relative; transition: filter 0.4s;}
-  .clock-face-unit { display: none; width: 210px; height: 210px; border-radius: 50%; background: var(--clock-white); border: 5px solid #333; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+  #time-strip {margin-top:16px; display:flex; gap:16px; align-items:center; justify-content:center; z-index:70; position:relative; transition: filter 0.4s; flex-shrink:0;}
+  .clock-face-unit { display: none; width: min(22vw, 110px); height: min(22vw, 110px); border-radius: 50%; background: var(--clock-white); border: 5px solid #333; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); align-items: center; justify-content: center; }
   .clock-face-unit.visible, #digital-clock.visible { display: flex; }
-  #digital-clock { display: none; background: #1a1a1a; color: #cc0000; font-family: monospace; min-width: 220px; height: 70px; align-items: center; justify-content: center; border-radius: 8px; border: 2px solid #333; font-size: 1.8rem; }
+  #digital-clock { display: none; background: #1a1a1a; color: #cc0000; font-family: monospace; min-width: min(40vw, 220px); height: 60px; align-items: center; justify-content: center; border-radius: 8px; border: 2px solid #333; font-size: clamp(1rem, 4vw, 1.8rem); }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .clock-face-unit { width: min(14vh, 100px); height: min(14vh, 100px); }
+    #digital-clock { min-width: min(20vh, 160px); height: 50px; font-size: clamp(0.9rem, 3vh, 1.4rem); }
+    #time-strip { margin-top: 6px; }
+  }
   #setup-overlay { display:none; position: absolute; bottom: 8%; width:min(95vw, 800px); background:rgba(15,13,10,0.98); border:1px solid var(--muted); padding:20px; flex-direction:column; align-items:center; border-radius:12px; z-index:1000; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
   .setup-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
   .setup-header h2 { font-size: 0.9rem; color: var(--gold); letter-spacing: 0.1em; }
