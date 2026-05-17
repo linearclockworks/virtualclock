@@ -12,6 +12,7 @@ except ImportError as e:
 SHOPIFY_SHOP    = os.environ.get('SHOPIFY_SHOP_NAME', 'linear-clockworks.myshopify.com')
 SHOPIFY_TOKEN   = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
 SHOPIFY_API_VER = '2024-01'
+GA_MEASUREMENT_ID = 'G-R901YZ7CVT'  # Google Analytics 4 — set '' to disable
 
 # All pct-based values (0-100). nudge6am/3pm/Mid estimated from product photo pixel positions.
 DEFAULTS = {
@@ -187,6 +188,12 @@ def main():
         sw_name, mn_name = f"{fname}-sw.js", f"{fname}.webmanifest"
         
         pwa_head = f'<link rel="manifest" href="./{mn_name}"><meta name="theme-color" content="#0d0b08"><link rel="apple-touch-icon" href="data:image/png;base64,{f_b64}"><script>if(\'serviceWorker\' in navigator){{window.addEventListener(\'load\',()=>{{navigator.serviceWorker.register(\'./{sw_name}\');}});}}</script>'
+        if GA_MEASUREMENT_ID:
+            pwa_head += (
+                f'<script async src="https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}"></script>'
+                f'<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}'
+                f'gtag("js",new Date());gtag("config","{GA_MEASUREMENT_ID}",{{"page_title":"{fname}"}});</script>'
+            )
         html = html.replace('</head>', pwa_head + '</head>')
         
         sw_content = (
