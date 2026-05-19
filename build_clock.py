@@ -3,7 +3,7 @@ import argparse, base64, io, os, sys, json, re, threading, webbrowser, time
 
 # Auto-bumped every build: YYYYMMDD.HHMMSS — ensures SW cache invalidates without manual version edits
 BUILD_VERSION = float(time.strftime('%Y%m%d.%H%M%S'))
-CAL_MAJOR = 14  # Bump this when cal JSON format changes (forces recalibration)
+CAL_MAJOR = 13  # Bump this when cal JSON format changes (forces recalibration)
 
 print(f"--- Initializing Industrial Clockworks Build System (v{BUILD_VERSION}) ---")
 try:
@@ -143,11 +143,16 @@ def main():
         with open(cal_json, 'r') as j:
             saved_data = json.load(j)
         saved_major = saved_data.get('cal_major', int(saved_data.get('version', 0)))
-        if saved_major == CAL_MAJOR:
+        if not args.calibrate:
+            # Plain build: always load cal JSON — calibration data is always valid
+            cal.update(saved_data)
+            print(f"  [Cal] Loaded calibration from {cal_json}")
+        elif saved_major == CAL_MAJOR:
+            # Calibrate mode: only load if major matches, so sliders start from correct baseline
             cal.update(saved_data)
             print(f"  [Cal] Loaded calibration from {cal_json}")
         else:
-            print(f"  [Cal] Ignoring {cal_json} (cal_major={saved_major}, expected {CAL_MAJOR}) — using DEFAULTS")
+            print(f"  [Cal] Ignoring {cal_json} (cal_major={saved_major}, expected {CAL_MAJOR}) — starting from DEFAULTS")
 
     cal['productSku'] = sku
     cal['productUrl'] = f"https://linearclockworks.com/products/{product['handle']}"
