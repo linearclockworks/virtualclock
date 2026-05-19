@@ -43,15 +43,15 @@
   .clock-face-unit { display:none; width:min(22vw,110px); height:min(22vw,110px); border-radius:50%; background:var(--clock-white); border:5px solid #333; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.5); align-items:center; justify-content:center; }
   .clock-face-unit.visible, #digital-clock.visible { display:flex; }
   #digital-clock { display:none; background:#1a1a1a; color:#cc0000; font-family:monospace; min-width:min(40vw,220px); height:60px; align-items:center; justify-content:center; border-radius:8px; border:2px solid #333; font-size:clamp(1rem,4vw,1.8rem); }
-  /* Calibration overlay */
-  #setup-overlay { display:none; position:absolute; bottom:8%; width:min(95vw,800px); background:rgba(15,13,10,0.98); border:1px solid var(--muted); padding:20px; flex-direction:column; align-items:center; border-radius:12px; z-index:1000; box-shadow:0 0 40px rgba(0,0,0,0.9); }
-  .setup-header { width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; }
-  .setup-header h2 { font-size:0.9rem; color:var(--gold); letter-spacing:0.1em; }
-  .done-btn-top { background:var(--gold); color:black; border:none; padding:5px 15px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.8rem; }
-  .sl-row { display:grid; grid-template-columns:130px 1fr 60px; align-items:center; gap:15px; width:100%; margin-bottom:8px; }
-  .sl-row label { font-size:0.85rem; color:var(--text); text-transform:uppercase; font-weight:bold; letter-spacing:0.05em; }
-  .sl-row span { font-family:monospace; color:var(--gold); text-align:right; font-size:0.85rem; }
-  #setup-overlay input[type="range"] { width:100%; height:28px; accent-color:var(--gold); cursor:pointer; }
+  /* Calibration: compact bottom sheet, clock visible above */
+  #setup-overlay { display:none; position:fixed; bottom:0; left:0; right:0; max-height:65vh; overflow-y:auto; -webkit-overflow-scrolling:touch; background:rgba(15,13,10,0.97); border-top:1px solid var(--muted); border-radius:14px 14px 0 0; padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 8px); flex-direction:column; align-items:stretch; z-index:2500; box-shadow:0 -4px 30px rgba(0,0,0,0.8); }
+  .setup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .setup-header h2 { font-size:0.85rem; color:var(--gold); letter-spacing:0.1em; }
+  .done-btn-top { background:var(--gold); color:black; border:none; padding:4px 14px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.8rem; }
+  .sl-row { display:grid; grid-template-columns:110px 1fr 52px; align-items:center; gap:10px; width:100%; margin-bottom:4px; }
+  .sl-row label { font-size:0.75rem; color:var(--text); text-transform:uppercase; font-weight:bold; letter-spacing:0.05em; }
+  .sl-row span { font-family:monospace; color:var(--gold); text-align:right; font-size:0.8rem; }
+  #setup-overlay input[type="range"] { width:100%; height:24px; accent-color:var(--gold); cursor:pointer; }
   /* Toolbar: single row by default */
   #toolbar { position:fixed; bottom:0; left:0; right:0; display:flex; flex-direction:row; align-items:center; gap:6px; padding:5px 12px; padding-bottom:calc(5px + env(safe-area-inset-bottom,0px)); z-index:2000; background:rgba(13,11,8,0.96); border-top:1px solid rgba(122,106,82,0.2); overflow-x:auto; scrollbar-width:none; flex-wrap:nowrap; }
   #toolbar::-webkit-scrollbar { display:none; }
@@ -86,8 +86,8 @@
   .help-plat li strong { color:var(--gold2); }
   .help-note { font-size:0.78rem; color:var(--muted); font-style:italic; margin-top:8px; }
   hr.help-div { border:none; border-top:1px solid rgba(122,106,82,0.2); margin:18px 0; }
-  /* Landscape: image height-constrained; time-strip overlays bottom-left of image */
-  @media (orientation: landscape) {
+  /* Landscape on phones (short viewport): image height-constrained; time-strip overlays bottom-left */
+  @media (orientation: landscape) and (max-height: 600px) {
     #clock-view { padding-bottom:0; }
     #clock-stage { width:auto; }
     #face-img { width:auto; height:auto; max-height:calc(100svh - 95px); max-width:100vw; }
@@ -227,7 +227,7 @@
   "ptrNudgeX": -0.36,
   "demoSpeed": 2.3,
   "nightDim": 0,
-  "version": 20260519.091528,
+  "version": 20260519.100242,
   "leftFrac": 0.12,
   "rightFrac": 0.852,
   "sweepSpeed": 3.75,
