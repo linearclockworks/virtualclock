@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Industrial Linear Clockworks</title>
+<style id="sku-style">
+  #sku-label { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; font-family: monospace; font-size: 0.65rem; color: var(--muted); opacity: 0.5; z-index: 2000; pointer-events: none; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0b08; --gold:#c8a96e; --gold2:#e8c98e; --text:#d4c5a9; --muted:#7a6a52;
+    --clock-white: #fdfdfd; --clock-black: #1a1a1a; --clock-red: #cc0000;
+    --lume: #9dff9d; --night-dim: 0.5;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{ background:var(--bg); color:var(--text); font-family:'Crimson Pro',serif; overflow:hidden; height:100vh; display:flex; flex-direction:column; align-items:center; user-select:none; padding-bottom: env(safe-area-inset-bottom); }
+  #night-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; pointer-events: none; z-index: 50; opacity: 0; transition: opacity 0.4s; }
+  body.night-mode #night-overlay { opacity: var(--night-dim); }
+  #clock-view{display:flex; flex-direction:column; align-items:center; justify-content:center; flex-grow:1; width:100%; padding:20px; position:relative;}
+  #level-guide { position: absolute; top: 32%; left: 0; width: 100%; height: 2px; background: rgba(200, 169, 110, 0.7); box-shadow: 0 0 12px var(--gold); z-index: 100; display: none; pointer-events: none; }
+  body.show-guide #level-guide { display: block; }
+  #clock-stage{position:relative; width:min(90vw, 960px); display:inline-block; overflow:visible;}
+  #face-img{width:100%; display:block; filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7)); transition: filter 0.4s;}
+  body.night-mode #face-img, body.night-mode #ptr-img { filter: brightness(calc(1 - var(--night-dim))); }
+  body.night-mode #time-strip { filter: brightness(calc((1 - var(--night-dim)) * 0.5)); }
+  #ptr-wrap { position: absolute; pointer-events: none; will-change: left; z-index: 65; width: 0; height: 0; display: flex; flex-direction: column; align-items: center; }
+  #ptr-img { position: absolute; bottom: 0; height: auto; width: auto; max-width: none; left: 50%; transform: translateX(-50%); }
+  #ptr-lume { position: absolute; left: -5px; transform: translateY(-50%); width: 10px; height: 10px; background: var(--lume); border-radius: 50%; box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8); opacity: 0; transition: opacity 0.5s; z-index: 66; }
+  body.night-mode #ptr-lume, body.calibrating-lume #ptr-lume { opacity: 1; }
+  #lume-row { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
+  .lume-dot { position: absolute; width: 10px; height: 10px; background: var(--lume); border-radius: 50%; box-shadow: 0 0 12px 4px rgba(157, 255, 157, 0.8); opacity: 0; transition: opacity 0.5s; transform: translate(-50%, -50%); }
+  body.night-mode .lume-dot, body.calibrating-lume .lume-dot { opacity: 1; }
+  #time-strip { margin-top:16px; display:flex; gap:16px; align-items:center; justify-content:center; z-index:70; position:relative; transition: filter 0.4s; flex-shrink:0; }
+  .clock-face-unit { display: none; width: min(22vw, 110px); height: min(22vw, 110px); border-radius: 50%; background: var(--clock-white); border: 5px solid #333; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+  .clock-face-unit.visible, #digital-clock.visible { display: flex; }
+  #digital-clock { display: none; background: #1a1a1a; color: #cc0000; font-family: monospace; min-width: min(40vw, 220px); height: 60px; align-items: center; justify-content: center; border-radius: 8px; border: 2px solid #333; font-size: clamp(1rem, 4vw, 1.8rem); }
+  /* Landscape: float time-strip over bottom-left of clock image */
+  @media (orientation: landscape) {
+    #clock-stage { position: relative; }
+    #time-strip { position: absolute; bottom: 6px; left: 6px; margin-top: 0; gap: 8px; background: rgba(13,11,8,0.55); border-radius: 10px; padding: 4px 8px; }
+    .clock-face-unit { width: min(12vh, 90px); height: min(12vh, 90px); border-width: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
+    #digital-clock { min-width: unset; width: min(18vh, 140px); height: min(7vh, 48px); font-size: clamp(0.8rem, 3vh, 1.3rem); }
+    #clock-view { padding-bottom: 0; }
+  }
+  #setup-overlay { display:none; position: absolute; bottom: 8%; width:min(95vw, 800px); background:rgba(15,13,10,0.98); border:1px solid var(--muted); padding:20px; flex-direction:column; align-items:center; border-radius:12px; z-index:1000; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
+  .setup-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .setup-header h2 { font-size: 0.9rem; color: var(--gold); letter-spacing: 0.1em; }
+  .done-btn-top { background: var(--gold); color: black; border: none; padding: 5px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+  .sl-row { display:grid; grid-template-columns:130px 1fr 60px; align-items:center; gap:15px; width:100%; margin-bottom:8px; }
+  .sl-row label { font-size:0.85rem; color:var(--text); text-transform:uppercase; font-weight: bold; letter-spacing: 0.05em;}
+  .sl-row span { font-family: monospace; color: var(--gold); text-align: right; font-size: 0.85rem;}
+  #setup-overlay input[type="range"] { width: 100%; height: 28px; accent-color: var(--gold); cursor: pointer; }
+  #toolbar { position:fixed; bottom:0; left:0; right:0; display:flex; flex-direction:column; gap:0; z-index:2000; background:rgba(13,11,8,0.96); border-top:1px solid rgba(122,106,82,0.2); padding-bottom:env(safe-area-inset-bottom,0px); }
+  .tool-group { display:flex; align-items:center; gap:6px; padding:5px 12px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; width:100%; }
+  .tool-group::-webkit-scrollbar { display:none; }
+  .tool-group + .tool-group { border-top:1px solid rgba(122,106,82,0.12); }
+  .tool-btn { background:none; border:none; color:var(--muted); cursor:pointer; opacity:0.7; font-size:1rem; font-weight:600; padding:5px 4px; text-decoration:none; white-space:nowrap; flex-shrink:0; }
+  .tool-btn.active, .tool-btn:hover { color:var(--gold); opacity:1; }
+  .slider-wrap { display:flex; align-items:center; gap:5px; font-family:monospace; color:var(--gold); font-size:0.73rem; flex-shrink:0; white-space:nowrap; }
+  #toolbar input[type="range"] { width:72px; accent-color:var(--gold); flex-shrink:0; }
+  .tb-sep { width:1px; height:20px; background:rgba(122,106,82,0.25); flex-shrink:0; }
+  .tb-spacer { flex:1; min-width:8px; }
+  /* Help overlay */
+  #help-overlay { display:none; position:fixed; inset:0; background:rgba(10,8,6,0.97); z-index:3000; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px); }
+  #help-inner { max-width:560px; margin:0 auto; padding:24px 20px 48px; }
+  .help-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--muted); padding-bottom:12px; }
+  .help-hdr h2 { font-family:'Playfair Display',serif; color:var(--gold); font-size:1.15rem; letter-spacing:0.06em; }
+  .help-close { background:var(--gold); color:#000; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.85rem; }
+  .help-section { margin-bottom:20px; }
+  .help-section h3 { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold2); margin-bottom:10px; }
+  .help-plat { background:rgba(255,255,255,0.04); border:1px solid rgba(122,106,82,0.25); border-radius:8px; padding:14px; margin-bottom:10px; }
+  .help-plat h4 { font-size:0.9rem; color:var(--gold); margin-bottom:8px; }
+  .help-plat ol { padding-left:18px; color:var(--text); }
+  .help-plat li { font-size:0.88rem; line-height:1.65; margin-bottom:3px; }
+  .help-plat li strong { color:var(--gold2); }
+  .help-note { font-size:0.78rem; color:var(--muted); font-style:italic; margin-top:8px; }
+  hr.help-div { border:none; border-top:1px solid rgba(122,106,82,0.2); margin:18px 0; }
+  #clock-view { padding-bottom:96px; }
+</style>
+</head>
+<body onclick="requestWakeLock()">
+<div id="night-overlay"></div>
+<div id="level-guide"></div>
+<div id="sku-label"></div>
+<div id="clock-view">
+  <div id="clock-stage">
+    <img id="face-img" src="FACE_DATA_URI">
+    <div id="lume-row"></div>
+    <div id="ptr-wrap"><img id="ptr-img" src="PTR_DATA_URI"><div id="ptr-lume"></div></div>
+    <div id="time-strip">
+      <div id="analog-clock" class="clock-face-unit">
+          <svg viewBox="0 0 100 100" style="width:94%;height:94%;">
+              <circle cx="50" cy="50" r="48" fill="white"/>
+              <g font-size="14" text-anchor="middle" font-weight="900" font-family="Arial" fill="black">
+                  <text x="50" y="15">12</text><text x="69" y="20">1</text><text x="83" y="34">2</text>
+                  <text x="88" y="54">3</text><text x="83" y="75">4</text><text x="69" y="89">5</text>
+                  <text x="50" y="94">6</text><text x="31" y="88">7</text><text x="17" y="75">8</text>
+                  <text x="12" y="54">9</text><text x="17" y="34">10</text><text x="31" y="20">11</text>
+              </g>
+              <line id="hand-h" x1="50" y1="50" x2="50" y2="30" stroke="black" stroke-width="7" stroke-linecap="round" style="transform-origin:50% 50%;"/>
+              <line id="hand-m" x1="50" y1="50" x2="50" y2="16" stroke="black" stroke-width="5" stroke-linecap="round" style="transform-origin:50% 50%;"/>
+          </svg>
+      </div>
+      <div id="digital-clock">06:00 AM</div>
+    </div>
+  </div>
+  <div id="setup-overlay">
+    <div class="setup-header">
+        <h2>CALIBRATION</h2>
+        <button id="done-btn-top" class="done-btn-top" onclick="finishSetup()">DONE</button>
+    </div>
+    <div class="sl-row"><label>Level</label><input type="range" id="sl-rotation" min="-10" max="10" step="0.01" oninput="onSl('rotation', this.value)" onmousedown="document.body.classList.add('show-guide')" onmouseup="document.body.classList.remove('show-guide')"><span id="val-rotation">0</span></div>
+    <div class="sl-row"><label>Ptr Height</label><input type="range" id="sl-trackYFrac" min="0" max="100" step="0.1" oninput="onSl('trackYFrac', this.value)"><span id="val-trackYFrac">0</span></div>
+    <div class="sl-row"><label>Ptr Lume Height</label><input type="range" id="sl-nudgePtrLumeY" min="0" max="100" step="0.1" oninput="onSl('nudgePtrLumeY', this.value)"><span id="val-nudgePtrLumeY">0</span></div>
+    <div class="sl-row"><label>Ptr Size</label><input type="range" id="sl-ptrRatio" min="1" max="100" step="0.1" oninput="onSl('ptrRatio', this.value)"><span id="val-ptrRatio">0</span></div>
+    <div class="sl-row"><label>Lume Height</label><input type="range" id="sl-nudgeDotsY" min="0" max="100" step="0.1" oninput="onSl('nudgeDotsY', this.value)"><span id="val-nudgeDotsY">0</span></div>
+    <div class="sl-row"><label>6 AM</label><input type="range" id="sl-nudge6am" min="0" max="100" step="0.006" oninput="onAnchor('nudge6am', this.value)"><span id="val-nudge6am">0</span></div>
+    <div class="sl-row"><label>3 PM</label><input type="range" id="sl-nudge3pm" min="0" max="100" step="0.006" oninput="onAnchor('nudge3pm', this.value)"><span id="val-nudge3pm">0</span></div>
+    <div class="sl-row"><label>Midnight</label><input type="range" id="sl-nudgeMid" min="0" max="100" step="0.006" oninput="onAnchor('nudgeMid', this.value)"><span id="val-nudgeMid">0</span></div>
+    <div class="sl-row"><label>Ptr Align</label><input type="range" id="sl-ptrNudgeX" min="-15" max="15" step="0.01" oninput="onSl('ptrNudgeX', this.value)"><span id="val-ptrNudgeX">0</span></div>
+  </div>
+</div>
+<div id="toolbar">
+  <!-- Row 1: playback + clocks -->
+  <div class="tool-group">
+    <button class="tool-btn" id="btn-demo" onclick="toggleDemo()">Demo</button>
+    <div class="slider-wrap"><span id="lbl-demoSpeed">Speed</span><input type="range" id="sl-demoSpeed" min="0" max="5.0" step="0.1" oninput="onSpeedSl(this.value)"><span id="val-demoSpeed">1x</span></div>
+    <div class="tb-sep"></div>
+    <div class="slider-wrap"><span>🌙</span><input type="range" id="sl-mainNightDim" min="0" max="0.9" step="0.01" onmousedown="forceNightPreview(true)" onmouseup="forceNightPreview(false)" oninput="onSl('nightDim', this.value)"></div>
+    <div class="tb-sep"></div>
+    <button class="tool-btn" onclick="toggleClock('analog')">🕒</button>
+    <button class="tool-btn" onclick="toggleClock('digital')">🔢</button>
+  </div>
+  <!-- Row 2: links + settings + help -->
+  <div class="tool-group">
+    <a id="details-link" href="#" class="tool-btn" target="_blank">Details</a>
+    <a href="https://ko-fi.com/linearclockworks" class="tool-btn" target="_blank" title="Support the maker">☕</a>
+    <div class="tb-spacer"></div>
+    <button class="tool-btn" onclick="showSetup()">⚙️</button>
+    <button class="tool-btn" onclick="showHelp()" title="Install &amp; Help">?</button>
+  </div>
+</div>
+
+<!-- Help / Install overlay -->
+<div id="help-overlay">
+  <div id="help-inner">
+    <div class="help-hdr">
+      <h2>Install &amp; Help</h2>
+      <button class="help-close" onclick="closeHelp()">CLOSE</button>
+    </div>
+    <div class="help-section">
+      <h3>Install as an App</h3>
+      <div class="help-plat">
+        <h4>🍎 iPhone / iPad — Safari</h4>
+        <ol>
+          <li>Open this page in <strong>Safari</strong> (not Chrome).</li>
+          <li>Tap the <strong>Share</strong> button — square with arrow at the bottom.</li>
+          <li>Scroll down and tap <strong>"Add to Home Screen"</strong>.</li>
+          <li>Tap <strong>Add</strong>.</li>
+        </ol>
+        <p class="help-note">Opens full-screen with no browser chrome, just like a native app.</p>
+      </div>
+      <div class="help-plat">
+        <h4>🤖 Android — Chrome</h4>
+        <ol>
+          <li>Open this page in <strong>Chrome</strong>.</li>
+          <li>Tap the <strong>three-dot menu ⋮</strong> top-right.</li>
+          <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.</li>
+          <li>Tap <strong>Install</strong>.</li>
+        </ol>
+        <p class="help-note">Chrome may also show an install banner at the bottom automatically.</p>
+      </div>
+      <div class="help-plat">
+        <h4>🖥 Desktop — Chrome or Edge</h4>
+        <ol>
+          <li>Open this page in <strong>Chrome</strong> or <strong>Edge</strong>.</li>
+          <li>Click the <strong>install icon ⊕</strong> in the address bar.</li>
+          <li>Click <strong>Install</strong>.</li>
+        </ol>
+        <p class="help-note">The clock opens in its own window and appears in your dock or taskbar.</p>
+      </div>
+    </div>
+    <hr class="help-div">
+    <div class="help-section">
+      <h3>Controls</h3>
+      <div class="help-plat">
+        <ol>
+          <li><strong>Demo</strong> — animates the pointer across the full day.</li>
+          <li><strong>Speed</strong> — demo animation speed; drag to zero to pause.</li>
+          <li><strong>🌙</strong> — night-mode dim level.</li>
+          <li><strong>🕒 / 🔢</strong> — toggle analog / digital reference clocks.</li>
+          <li><strong>Details</strong> — opens the product page for this clock.</li>
+          <li><strong>☕</strong> — support Linear Clockworks on Ko-fi.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+<script id="cal-data" type="application/json">CAL_JSON_HERE</script>
+<script>
+let wakeLock = null, demoTimer = null;
+async function requestWakeLock() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} } }
+
+const DEFAULTS = JSON.parse(document.getElementById('cal-data').textContent);
+try { localStorage.removeItem('lc_cal'); } catch(e) {}
+
+let cal = Object.assign({}, DEFAULTS), wip = Object.assign({}, DEFAULTS);
+let sweeping = false, isCalibrating = false, currentPreviewFrac = 0, isGlidingBack = false, isForceNight = false;
+let previewLockFrac = null;
+let sweepRAF = null, lastAnimTime = 0, animTarget = 0, animStart = 0, animDuration = 0, animCallback = null, isRetAnim = false, animProgress = 0;
+
+function initLume() {
+  const row = document.getElementById('lume-row'); row.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const dot = document.createElement('div'); dot.className = 'lume-dot'; dot.id = `dot-${i}`; row.appendChild(dot);
+  }
+}
+
+function timeToFrac(n) {
+  const h = n.getHours(), m = n.getMinutes(), s = n.getSeconds();
+  const totalSec = (h * 3600) + (m * 60) + s;
+  if (totalSec < 6 * 3600) return 0;
+  return Math.max(0, Math.min((totalSec - 6 * 3600) / (18 * 3600), 1));
+}
+
+function getCorrectedX(f, c) {
+  const x0 = c.nudge6am / 100, x1 = c.nudge3pm / 100, x2 = c.nudgeMid / 100;
+  return (2*x2 + 2*x0 - 4*x1)*f*f + (4*x1 - 3*x0 - x2)*f + x0;
+}
+
+function updateAllClocks(frac, isReturning = false) {
+  const activeCal = isCalibrating ? wip : cal;
+  const face = document.getElementById('face-img'), wrap = document.getElementById('ptr-wrap');
+  const ptrImg = document.getElementById('ptr-img'), ptrLume = document.getElementById('ptr-lume');
+  const imgW = face.clientWidth, imgH = face.clientHeight;
+  if (!imgW || !imgH) return;
+  const isNight = isForceNight || isReturning || (timeToFrac(new Date()) === 0 && !isCalibrating);
+  document.body.classList.toggle('night-mode', isNight);
+  face.style.transform = `rotate(${activeCal.rotation || 0}deg)`;
+  for (let i = 0; i < 7; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    if (dot) {
+      dot.style.top = (imgH * activeCal.nudgeDotsY / 100) + "px";
+      dot.style.left = (getCorrectedX(i/6, activeCal) * imgW) + "px";
+    }
+  }
+  wrap.style.left = (getCorrectedX(frac, activeCal) * imgW + (activeCal.ptrNudgeX || 0) * imgW / 100) + "px";
+  wrap.style.top = (imgH * activeCal.trackYFrac / 100) + "px";
+  ptrImg.style.height = (imgH * activeCal.ptrRatio / 100) + "px";
+  ptrLume.style.top = (imgH * activeCal.nudgePtrLumeY / 100) - (imgH * activeCal.trackYFrac / 100) + "px";
+  let ch, cm, cs;
+  if (sweeping || isGlidingBack) {
+    const fracSec = isReturning ? (1.0 - frac) * 6 * 3600 : frac * 18 * 3600 + 6 * 3600;
+    ch = Math.floor(fracSec / 3600) % 24;
+    cm = Math.floor((fracSec % 3600) / 60);
+    cs = Math.floor(fracSec % 60);
+  } else {
+    const now = new Date(); ch = now.getHours(); cm = now.getMinutes(); cs = now.getSeconds();
+  }
+  document.getElementById('digital-clock').textContent = `${ch % 12 || 12}:${String(cm).padStart(2,'0')} ${ch >= 12 ? 'PM' : 'AM'}`;
+  document.getElementById('hand-h').style.transform = `rotate(${ch * 30 + cm * 0.5}deg)`;
+  document.getElementById('hand-m').style.transform = `rotate(${cm * 6 + cs * 0.1}deg)`;
+}
+
+function forceNightPreview(on) {
+  isForceNight = on;
+  if (!on) {
+    if (isCalibrating && previewLockFrac !== null) {
+      updateAllClocks(previewLockFrac); // stay at anchor position
+    } else {
+      previewLockFrac = null; tick();
+    }
+  } else { updateAllClocks(currentPreviewFrac); }
+}
+function toggleDemo() { sweeping ? stopSweep() : startSweep(); }
+
+function startSweep() {
+  if (sweepRAF) cancelAnimationFrame(sweepRAF);
+  if (demoTimer) clearTimeout(demoTimer);
+  isGlidingBack = false; sweeping = true; document.getElementById('btn-demo').textContent = "Stop";
+  const steps = [...Array(19).keys()].map(i => i/18);
+  const returnSteps = [5/6, 4/6, 3/6, 2/6, 1/6, 0];
+  let i = 0, isNight = false;
+  const next = () => {
+    if (!sweeping) return;
+    const speed = cal.demoSpeed || 0;
+    if (speed === 0) { demoTimer = setTimeout(next, 200); return; } // paused - poll until unpaused
+    if (!isNight) {
+      if (i >= steps.length) { isNight = true; i = 0; demoTimer = setTimeout(next, 400/speed); return; }
+      animateToFrac(steps[i++], 800/speed, false, () => { demoTimer = setTimeout(next, 400/speed); });
+    } else {
+      if (i >= returnSteps.length) { stopSweep(); return; }
+      animateToFrac(returnSteps[i++], 800/speed, true, () => { demoTimer = setTimeout(next, 400/speed); });
+    }
+  };
+  animateToFrac(0, 1000, false, next);
+}
+
+function stopSweep() {
+  sweeping = false; document.getElementById('btn-demo').textContent = "Demo";
+  if (sweepRAF) cancelAnimationFrame(sweepRAF);
+  if (demoTimer) clearTimeout(demoTimer);
+  sweepRAF = null; demoTimer = null; animCallback = null; isGlidingBack = true;
+  animateToFrac(timeToFrac(new Date()), 1500, false, () => { isGlidingBack = false; });
+}
+
+function animateToFrac(target, duration, isRet, onDone) {
+  animStart = currentPreviewFrac; animTarget = target; animDuration = Math.max(duration, 1);
+  animProgress = 0; lastAnimTime = performance.now(); animCallback = onDone; isRetAnim = isRet;
+  if (!sweepRAF) sweepRAF = requestAnimationFrame(animFrame);
+}
+
+function animFrame(t) {
+  const dt = t - lastAnimTime; lastAnimTime = t;
+  animProgress = Math.min(animProgress + dt / animDuration, 1);
+  const ease = animProgress < 0.5 ? 2*animProgress*animProgress : -1+(4-2*animProgress)*animProgress;
+  currentPreviewFrac = animStart + (animTarget - animStart) * ease;
+  updateAllClocks(currentPreviewFrac, isRetAnim);
+  if (animProgress < 1) { sweepRAF = requestAnimationFrame(animFrame); }
+  else { sweepRAF = null; let cb = animCallback; animCallback = null; if (cb) cb(); }
+}
+
+function showSetup() {
+  isCalibrating = true; sweeping = false;
+  document.body.classList.add('is-calibrating', 'calibrating-lume');
+  document.getElementById('setup-overlay').style.display = 'flex';
+  syncSliders();
+}
+
+function syncSliders() {
+  ['rotation','nudge6am','nudge3pm','nudgeMid','trackYFrac','ptrRatio','nudgeDotsY','nudgePtrLumeY','ptrNudgeX'].forEach(k => {
+    const el = document.getElementById('sl-'+k);
+    if (el) {
+      if (['nudge6am','nudge3pm','nudgeMid'].includes(k)) {
+        const range = k === 'nudge3pm' ? 1.5 : k === 'nudgeMid' ? 15 : 10;
+        el.min = Math.max(0, wip[k] - range); el.max = Math.min(100, wip[k] + range);
+      }
+      el.value = wip[k];
+      document.getElementById('val-'+k).textContent = ['trackYFrac','nudgeDotsY','nudgePtrLumeY','ptrRatio'].includes(k) ? Math.round(wip[k])+'%' : wip[k];
+    }
+  });
+  document.getElementById('sl-mainNightDim').value = wip.nightDim;
+}
+
+function onSl(k, v) {
+  const prev = wip[k]; wip[k] = parseFloat(v);
+  if (k === 'trackYFrac') {
+    wip.nudgePtrLumeY = Math.min(100, Math.max(0, wip.nudgePtrLumeY + (wip[k] - prev)));
+    const el = document.getElementById('sl-nudgePtrLumeY');
+    if (el) { el.value = wip.nudgePtrLumeY; document.getElementById('val-nudgePtrLumeY').textContent = Math.round(wip.nudgePtrLumeY) + '%'; }
+  }
+  if (k === 'ptrRatio') {
+    // Lume sits at a fixed position on the pointer image; shift by half the height delta
+    const face = document.getElementById('face-img');
+    const imgH = face ? face.clientHeight : 0;
+    if (imgH) {
+      const delta = (wip[k] - prev) * imgH / 100;
+      const lumeShift = delta / imgH * 100; // convert back to pct
+      wip.nudgePtrLumeY = Math.min(100, Math.max(0, wip.nudgePtrLumeY - lumeShift));
+      const el = document.getElementById('sl-nudgePtrLumeY');
+      if (el) { el.value = wip.nudgePtrLumeY; document.getElementById('val-nudgePtrLumeY').textContent = Math.round(wip.nudgePtrLumeY) + '%'; }
+    }
+  }
+  if (k === 'nightDim') { document.documentElement.style.setProperty('--night-dim', v); }
+  else { const el = document.getElementById('val-'+k); if (el) el.textContent = ['trackYFrac','nudgeDotsY','nudgePtrLumeY','ptrRatio'].includes(k) ? Math.round(wip[k])+'%' : v; }
+  updateAllClocks(previewLockFrac !== null ? previewLockFrac : 0.5);
+}
+
+function onAnchor(k, v) {
+  wip[k] = parseFloat(v); document.getElementById('val-'+k).textContent = parseFloat(v).toFixed(2);
+  const preview = k === 'nudge6am' ? 0 : k === 'nudge3pm' ? 0.5 : 1;
+  previewLockFrac = preview; currentPreviewFrac = preview; updateAllClocks(preview);
+}
+
+function onSpeedSl(v) {
+  cal.demoSpeed = parseFloat(v);
+  document.getElementById('lbl-demoSpeed').textContent = cal.demoSpeed === 0 ? 'Pause' : 'Speed';
+  document.getElementById('val-demoSpeed').textContent = cal.demoSpeed === 0 ? '⏸' : v + 'x';
+}
+function toggleClock(t) { document.getElementById(t+'-clock').classList.toggle('visible'); }
+
+async function finishSetup() {
+  const btn = document.getElementById('done-btn-top'), orig = btn.textContent;
+  btn.textContent = "...";
+  cal = Object.assign({}, wip); window.__wipCal = cal;
+  document.body.classList.remove('calibrating-lume', 'is-calibrating', 'night-mode');
+  try { await fetch("/done", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(cal) }); } catch(e) {}
+  setTimeout(() => { isCalibrating = false; previewLockFrac = null; document.getElementById('setup-overlay').style.display = 'none'; btn.textContent = orig; tick(); }, 800);
+}
+
+window.onload = () => {
+  initLume();
+  document.getElementById('details-link').href = cal.productUrl || ("https://linearclockworks.com/search?q=" + (cal.productSku || ""));
+  if (cal.productSku) {
+    document.title = cal.productSku + ' — Linear Clockworks';
+    document.getElementById('sku-label').textContent = cal.productSku;
+  }
+  document.documentElement.style.setProperty('--night-dim', cal.nightDim);
+  document.getElementById('sl-mainNightDim').value = cal.nightDim;
+  document.getElementById('sl-demoSpeed').value = cal.demoSpeed;
+  document.getElementById('lbl-demoSpeed').textContent = cal.demoSpeed === 0 ? 'Pause' : 'Speed';
+  document.getElementById('val-demoSpeed').textContent = cal.demoSpeed === 0 ? '⏸' : cal.demoSpeed + 'x';
+  const face = document.getElementById('face-img');
+  if (face.complete) { tick(); } else { face.onload = tick; }
+  setInterval(() => { if (!sweeping && !isCalibrating && !isGlidingBack) tick(); }, 1000);
+};
+
+function tick() {
+  if (isCalibrating) return;
+  currentPreviewFrac = timeToFrac(new Date());
+  updateAllClocks(currentPreviewFrac);
+}
+function showHelp() { document.getElementById('help-overlay').style.display = 'block'; }
+function closeHelp() { document.getElementById('help-overlay').style.display = 'none'; }
+</script>
+</body>
+</html>

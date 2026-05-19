@@ -1,7 +1,11 @@
 #!/usr/bin/python3
 import argparse, base64, io, os, sys, json, re, threading, webbrowser, time
 
-print("--- Initializing Industrial Clockworks Build System (v13.0) ---")
+# Auto-bumped every build: YYYYMMDD.HHMMSS — ensures SW cache invalidates without manual version edits
+BUILD_VERSION = float(time.strftime('%Y%m%d.%H%M%S'))
+CAL_MAJOR = 14  # Bump this when cal JSON format changes (forces recalibration)
+
+print(f"--- Initializing Industrial Clockworks Build System (v{BUILD_VERSION}) ---")
 try:
     from PIL import Image
     from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -27,7 +31,7 @@ DEFAULTS = {
     "ptrNudgeX": -1.2,
     "demoSpeed": 2.3,
     "nightDim": 0.46,
-    "version": 13.0
+    "version": BUILD_VERSION
 }
 TEMPLATE = os.path.join(os.path.dirname(__file__), 'clock_template.html')
 REQ_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
@@ -138,15 +142,17 @@ def main():
     if os.path.exists(cal_json):
         with open(cal_json, 'r') as j:
             saved_data = json.load(j)
-        if saved_data.get('version') == 13.0:
+        saved_major = saved_data.get('cal_major', int(saved_data.get('version', 0)))
+        if saved_major == CAL_MAJOR:
             cal.update(saved_data)
-            print(f"  [Cal] Loaded v13 calibration from {cal_json}")
+            print(f"  [Cal] Loaded calibration from {cal_json}")
         else:
-            print(f"  [Cal] Ignoring {cal_json} (version={saved_data.get('version','none')}, not v13) — using DEFAULTS")
+            print(f"  [Cal] Ignoring {cal_json} (cal_major={saved_major}, expected {CAL_MAJOR}) — using DEFAULTS")
 
     cal['productSku'] = sku
     cal['productUrl'] = f"https://linearclockworks.com/products/{product['handle']}"
-    cal['version'] = 13.0
+    cal['version'] = BUILD_VERSION
+    cal['cal_major'] = CAL_MAJOR
 
     # Inject cal values — simple sentinel replace, no regex needed
     html = html.replace('CAL_JSON_HERE', json.dumps(cal, indent=2))
