@@ -16,6 +16,12 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{ background:var(--bg); color:var(--text); font-family:'Crimson Pro',serif; overflow:hidden; height:100svh; display:flex; flex-direction:column; align-items:center; user-select:none; padding-bottom:env(safe-area-inset-bottom); }
+  /* Safari-compatible range slider styling */
+  input[type="range"] { -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
+  input[type="range"]::-webkit-slider-runnable-track { background:var(--muted); border-radius:4px; height:4px; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--gold); margin-top:-7px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
+  input[type="range"]::-moz-range-track { background:var(--muted); border-radius:4px; height:4px; }
+  input[type="range"]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:var(--gold); border:none; cursor:pointer; }
   #night-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:black; pointer-events:none; z-index:50; opacity:0; transition:opacity 0.4s; }
   body.night-mode #night-overlay { opacity:var(--night-dim); }
   /* Toolbar is ~44px single row; pad bottom so image never hides behind it */
@@ -33,7 +39,7 @@
   body.night-mode #time-strip { filter:brightness(calc((1 - var(--night-dim)) * 0.5)); }
   #ptr-wrap { position:absolute; pointer-events:none; will-change:left; z-index:65; width:0; height:0; display:flex; flex-direction:column; align-items:center; }
   #ptr-img { position:absolute; bottom:0; height:auto; width:auto; max-width:none; left:50%; transform:translateX(-50%); }
-  #ptr-lume { position:absolute; left:-5px; transform:translateY(-50%); width:10px; height:10px; background:var(--lume); border-radius:50%; box-shadow:0 0 12px 4px rgba(157,255,157,0.8); opacity:0; transition:opacity 0.5s; z-index:66; }
+  #ptr-lume { position:absolute; left:0; transform:translate(-50%, -50%); width:10px; height:10px; background:var(--lume); border-radius:50%; box-shadow:0 0 12px 4px rgba(157,255,157,0.8); opacity:0; transition:opacity 0.5s; z-index:66; }
   body.night-mode #ptr-lume, body.calibrating-lume #ptr-lume { opacity:1; }
   #lume-row { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:60; }
   .lume-dot { position:absolute; width:10px; height:10px; background:var(--lume); border-radius:50%; box-shadow:0 0 12px 4px rgba(157,255,157,0.8); opacity:0; transition:opacity 0.5s; transform:translate(-50%,-50%); }
@@ -224,6 +230,7 @@ const DEFAULTS = JSON.parse(document.getElementById('cal-data').textContent);
 try { localStorage.removeItem('lc_cal'); } catch(e) {}
 
 let cal = Object.assign({}, DEFAULTS), wip = Object.assign({}, DEFAULTS);
+window.cal = cal;
 let sweeping = false, isCalibrating = false, currentPreviewFrac = 0, isGlidingBack = false, isForceNight = false;
 let previewLockFrac = null;
 let sweepRAF = null, lastAnimTime = 0, animTarget = 0, animStart = 0, animDuration = 0, animCallback = null, isRetAnim = false, animProgress = 0;
@@ -351,7 +358,7 @@ function syncSliders() {
     const el = document.getElementById('sl-'+k);
     if (el) {
       if (['nudge6am','nudge3pm','nudgeMid'].includes(k)) {
-        const range = k === 'nudge3pm' ? 1.5 : k === 'nudgeMid' ? 15 : 10;
+        const range = k === 'nudgeMid' ? 15 : k === 'nudge3pm' ? 15 : 10;
         el.min = Math.max(0, wip[k] - range); el.max = Math.min(100, wip[k] + range);
       }
       el.value = wip[k];
@@ -400,7 +407,7 @@ function toggleClock(t) { document.getElementById(t+'-clock').classList.toggle('
 async function finishSetup() {
   const btn = document.getElementById('done-btn-top'), orig = btn.textContent;
   btn.textContent = "...";
-  cal = Object.assign({}, wip); window.__wipCal = cal;
+  cal = Object.assign({}, wip); window.__wipCal = cal; window.cal = cal;
   document.body.classList.remove('calibrating-lume', 'is-calibrating', 'night-mode');
   try { await fetch("/done", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(cal) }); } catch(e) {}
   setTimeout(() => { isCalibrating = false; previewLockFrac = null; document.getElementById('setup-overlay').style.display = 'none'; btn.textContent = orig; tick(); }, 800);

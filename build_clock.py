@@ -3,7 +3,7 @@ import argparse, base64, io, os, sys, json, re, threading, webbrowser, time
 
 # Auto-bumped every build: YYYYMMDD.HHMMSS — ensures SW cache invalidates without manual version edits
 BUILD_VERSION = float(time.strftime('%Y%m%d.%H%M%S'))
-CAL_MAJOR = 13  # Bump this when cal JSON format changes (forces recalibration)
+CAL_MAJOR = 14  # Bump this when cal JSON format changes (forces recalibration)
 
 print(f"--- Initializing Industrial Clockworks Build System (v{BUILD_VERSION}) ---")
 try:
@@ -58,7 +58,14 @@ def find_product_by_sku(sku, cached_id=None):
         query = """query($id: ID!) { product(id: $id) { id title handle images(first: 20) { edges { node { url } } } } }"""
         data = shopify_graphql(query, {'id': cached_id})
         p = data.get('product')
-        if p: return p
+        if p:
+            # Normalize images to flat URL list, same as SKU search path
+            return {
+                'id': p['id'],
+                'title': p['title'],
+                'handle': p.get('handle'),
+                'images': [e['node']['url'] for e in p['images']['edges']]
+            }
         print("  [API] Cached ID no longer valid, falling back to SKU search...")
 
     print(f"  [API] Querying SKU: {sku}...")
@@ -196,7 +203,7 @@ def main():
     else:
         html = strip_calibration(html, f"https://{SHOPIFY_SHOP}/products/{product['handle']}")
         cv = int(time.time())
-        sw_name, mn_name = f"{fname}-sw.js", f"{fname}.webmanifest"
+        sw_name, mn_name, icon_name = f"{fname}-sw.js", f"{fname}.webmanifest", f"{fname}-icon.png"
         
         pwa_head = f'<link rel="manifest" href="./{mn_name}"><meta name="theme-color" content="#0d0b08"><link rel="apple-touch-icon" href="data:image/png;base64,{f_b64}"><script>if(\'serviceWorker\' in navigator){{window.addEventListener(\'load\',()=>{{navigator.serviceWorker.register(\'./{sw_name}\');}});}}</script>'
         if GA_MEASUREMENT_ID:
@@ -213,16 +220,18 @@ def main():
             f"self.addEventListener('activate',e=>{{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('lc-{fname}-')&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();}}); "
             f"self.addEventListener('fetch',e=>{{if(e.request.url.includes('{fname}.html')||e.request.url.endsWith('/')){{e.respondWith(fetch(e.request).then(r=>{{const cl=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,cl));return r;}}).catch(()=>caches.match(e.request)));}}}}); "
         )
-        manifest = {"name":f"Linear Clock {fname}","short_name":fname,"start_url":f"./{fname}.html","display":"standalone","background_color":"#0d0b08","theme_color":"#c8a96e","icons":[{"src":f"data:image/png;base64,{f_b64}","sizes":"512x512","type":"image/png"}]}
+        with open(icon_name, 'wb') as f: f.write(open(f_cache, 'rb').read())
+        manifest = {"name":f"Linear Clock {fname}","short_name":fname,"start_url":f"./{fname}.html","display":"standalone","background_color":"#0d0b08","theme_color":"#c8a96e","icons":[{"src":f"./{icon_name}","sizes":"512x512","type":"image/png"}]}
         
         with open(f"{fname}.html", 'w') as f: f.write(html)
         with open(sw_name, 'w') as f: f.write(sw_content)
         with open(mn_name, 'w') as f: json.dump(manifest, f, indent=2)
         
+        os.system(f"git add {fname}.html {sw_name} {mn_name} {icon_name}")
         print(f"\n[Success] PWA Build Complete: {fname}")
         print("-" * 45)
         print(f"URL: https://linearclockworks.github.io/virtualclock/{fname}.html")
-        print(f"git add {fname}.html {sw_name} {mn_name}")
+        print(f"git add {fname}.html {sw_name} {mn_name} {icon_name}")
         print(f'git commit -m "{fname} teaching clock build"')
         print(f"git push")
         print("-" * 45)
