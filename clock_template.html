@@ -245,7 +245,10 @@ function initLume() {
 function timeToFrac(n) {
   const h = n.getHours(), m = n.getMinutes(), s = n.getSeconds();
   const totalSec = (h * 3600) + (m * 60) + s;
-  if (totalSec < 6 * 3600) return 0;
+  if (totalSec < 6 * 3600) {
+    // Night: midnight=1.0, 6AM=0.0, returned as negative to signal night/returning
+    return -(1.0 - totalSec / (6 * 3600));
+  }
   return Math.max(0, Math.min((totalSec - 6 * 3600) / (18 * 3600), 1));
 }
 
@@ -260,7 +263,7 @@ function updateAllClocks(frac, isReturning = false) {
   const ptrImg = document.getElementById('ptr-img'), ptrLume = document.getElementById('ptr-lume');
   const imgW = face.clientWidth, imgH = face.clientHeight;
   if (!imgW || !imgH) return;
-  const isNight = isForceNight || isReturning || (timeToFrac(new Date()) === 0 && !isCalibrating);
+  const isNight = isForceNight || isReturning || (timeToFrac(new Date()) < 0 && !isCalibrating);
   document.body.classList.toggle('night-mode', isNight);
   face.style.transform = `rotate(${activeCal.rotation || 0}deg)`;
   for (let i = 0; i < 7; i++) {
@@ -327,7 +330,10 @@ function stopSweep() {
   if (sweepRAF) cancelAnimationFrame(sweepRAF);
   if (demoTimer) clearTimeout(demoTimer);
   sweepRAF = null; demoTimer = null; animCallback = null; isGlidingBack = true;
-  animateToFrac(timeToFrac(new Date()), 1500, false, () => { isGlidingBack = false; });
+  const rawFrac = timeToFrac(new Date());
+  const targetFrac = rawFrac < 0 ? -rawFrac : rawFrac;
+  const targetRet = rawFrac < 0;
+  animateToFrac(targetFrac, 1500, targetRet, () => { isGlidingBack = false; });
 }
 
 function animateToFrac(target, duration, isRet, onDone) {
@@ -427,13 +433,19 @@ window.onload = () => {
   document.getElementById('val-demoSpeed').textContent = cal.demoSpeed === 0 ? '⏸' : cal.demoSpeed + 'x';
   const face = document.getElementById('face-img');
   if (face.complete) { tick(); } else { face.onload = tick; }
-  setInterval(() => { if (!sweeping && !isCalibrating && !isGlidingBack) tick(); }, 1000);
+  window._ticker = setInterval(() => { if (!sweeping && !isCalibrating && !isGlidingBack) tick(); }, 1000);
 };
 
 function tick() {
   if (isCalibrating) return;
-  currentPreviewFrac = timeToFrac(new Date());
-  updateAllClocks(currentPreviewFrac);
+  const raw = timeToFrac(new Date());
+  if (raw < 0) {
+    currentPreviewFrac = -raw;
+    updateAllClocks(currentPreviewFrac, true);
+  } else {
+    currentPreviewFrac = raw;
+    updateAllClocks(currentPreviewFrac);
+  }
 }
 function showHelp() { document.getElementById('help-overlay').style.display = 'block'; }
 function closeHelp() { document.getElementById('help-overlay').style.display = 'none'; }
