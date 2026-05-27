@@ -1,0 +1,15 @@
+{
+  "name": "Linear Clock Luna-1075",
+  "short_name": "Luna-1075",
+  "start_url": "./Luna-1075.html",
+  "display": "standalone",
+  "background_color": "#0d0b08",
+  "theme_color": "#c8a96e",
+  "icons": [
+    {
+      "src": "./Luna-1075-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
