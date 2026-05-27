@@ -1,0 +1,15 @@
+{
+  "name": "Linear Clock Cormoran-1056",
+  "short_name": "Cormoran-1056",
+  "start_url": "./Cormoran-1056.html",
+  "display": "standalone",
+  "background_color": "#0d0b08",
+  "theme_color": "#c8a96e",
+  "icons": [
+    {
+      "src": "./Cormoran-1056-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
