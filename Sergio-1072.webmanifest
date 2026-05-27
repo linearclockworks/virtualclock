@@ -1,0 +1,15 @@
+{
+  "name": "Linear Clock Sergio-1072",
+  "short_name": "Sergio-1072",
+  "start_url": "./Sergio-1072.html",
+  "display": "standalone",
+  "background_color": "#0d0b08",
+  "theme_color": "#c8a96e",
+  "icons": [
+    {
+      "src": "./Sergio-1072-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
