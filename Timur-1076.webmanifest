@@ -1,0 +1,15 @@
+{
+  "name": "Linear Clock Timur-1076",
+  "short_name": "Timur-1076",
+  "start_url": "./Timur-1076.html",
+  "display": "standalone",
+  "background_color": "#0d0b08",
+  "theme_color": "#c8a96e",
+  "icons": [
+    {
+      "src": "./Timur-1076-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
